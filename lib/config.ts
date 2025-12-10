@@ -1,16 +1,4 @@
-import Err from '@openaddresses/batch-error';
-import STS from '@aws-sdk/client-sts';
-import External from './external.js';
-import SecretsManager from '@aws-sdk/client-secrets-manager';
-import EventsPool from './events-pool.js';
-import { Pool, GenerateUpsert } from '@openaddresses/batch-generic';
-import ConnectionPool from './connection-pool.js';
-import { ConnectionWebSocket } from './connection-web.js';
-import type { Server } from './schema.js';
-import { type InferSelectModel } from 'drizzle-orm';
-import Models from './models.js';
 import process from 'node:process';
-import * as pgtypes from './schema.js';
 
 interface ConfigArgs {
     silent: boolean,
@@ -46,8 +34,6 @@ export default class Config {
             if (!process.env.API_URL) throw new Error('API_URL env must be set');
 
             API_URL = process.env.API_URL;
-
-            const apiUrl = new URL(process.env.API_URL);
         }
 
         const config = new Config({

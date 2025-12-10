@@ -3,8 +3,8 @@ import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
 import history, {Context} from 'connect-history-api-fallback';
-import { StandardResponse } from './lib/types.ts'
-import ServerManager from './lib/server.ts';
+import { StandardResponse } from './lib/types.js'
+import ServerManager from './lib/server.js';
 import Schema from '@openaddresses/batch-schema';
 import minimist from 'minimist';
 import Config from './lib/config.js';
