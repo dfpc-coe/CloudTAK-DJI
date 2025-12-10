@@ -5,7 +5,7 @@
     "description": "DJI Extension for CloudTAK",
     "main": "index.js",
     "scripts": {
-        "check": "tsc && cp package.json dist/",
+        "dist": "tsc && cp package.json dist/",
         "test": "exit 0",
         "build": "node bin/build.js",
         "lint": "eslint index.ts lib/ routes/ cloudformation/",

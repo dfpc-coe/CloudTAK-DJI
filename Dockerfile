@@ -25,6 +25,6 @@ RUN cd web \
     && cd ..
 
 RUN npm run lint \
-    && npm run build
+    && npm run dist
 
 CMD ["./start"]
