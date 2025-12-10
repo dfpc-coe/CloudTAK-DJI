@@ -38,7 +38,7 @@ export async function std(
         opts.headers['Content-Type'] = 'application/json';
     }
 
-    if (!isWebWorker() && localStorage.token && !opts.headers.Authorization) {
+    if (localStorage.token && !opts.headers.Authorization) {
         opts.headers['Authorization'] = 'Bearer ' + localStorage.token;
     } else if (opts.token) {
         opts.headers['Authorization'] = 'Bearer ' + opts.token
@@ -60,9 +60,7 @@ export async function std(
         err.body = bdy;
         throw err;
     } else if (res.status === 401) {
-        if (!isWebWorker()) {
-            delete localStorage.token;
-        }
+        delete localStorage.token;
         throw new Error('401');
     }
 

@@ -113,22 +113,15 @@
             :err='error'
             @close='error = undefined'
         />
-        <LoginModal
-            v-if='login'
-            @close='login = false'
-            @login='login= false'
-        />
     </div>
 </template>
 
 <script setup lang='ts'>
 import { ref, computed, onErrorCaptured, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router';
-import type { Login, Server } from './types.ts';
 import { useBrandStore } from './stores/brand.ts';
 import '@tabler/core/dist/js/tabler.min.js';
 import '@tabler/core/dist/css/tabler.min.css';
-import LoginModal from './components/util/LoginModal.vue'
 import {
     IconCode,
     IconLogout,
@@ -184,30 +177,16 @@ onErrorCaptured((err) => {
 });
 
 onMounted(async () => {
-    let status;
-    try {
-        const server = await std('/api/server') as Server;
-        status = server.status;
-    } catch (err) {
-        console.warn('Server Error (Likely the server is in a configured state)', err);
-        status = 'configured';
-    }
-
     await brandStore.init();
 
     window.addEventListener('unhandledrejection', (e) => {
         error.value = e.reason;
     });
 
-    if (status === 'unconfigured') {
-        delete localStorage.token;
-        router.push("/configure");
-    } else {
-        if (localStorage.token) {
-            await refreshLogin();
-        } else if (route.name !== 'login') {
-            routeLogin();
-        }
+    if (localStorage.token) {
+        await refreshLogin();
+    } else if (route.name !== 'login') {
+        routeLogin();
     }
 
     loading.value = false;
