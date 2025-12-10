@@ -1,0 +1,18 @@
+{
+    "name": "tak-cloudtak-dji",
+    "profile": "coegc",
+    "region": "us-gov-east-1",
+    "tags": [
+        {
+            "Key": "Project",
+            "Value": "cloudtak"
+        },
+        "Owner",
+        "Client"
+    ],
+    "artifacts": {
+        "docker": [
+            "coe-ecr-dji:{{gitsha}}"
+        ]
+    }
+}
