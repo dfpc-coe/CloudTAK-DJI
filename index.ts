@@ -44,7 +44,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
         silent: args.silent || false,
     });
 
-    await server(config);
+    const sm = await server(config);
+    console.log('Server started, listening:', sm.server.listening);
 }
 
 export default async function server(config: Config): Promise<ServerManager> {
@@ -157,14 +158,24 @@ export default async function server(config: Config): Promise<ServerManager> {
     app.use(express.static('web/dist'));
 
     return new Promise((resolve) => {
-        const srv = app.listen(5003, () => {
+        const srv = app.listen(5004, () => {
             if (!config.silent) {
-                console.log('ok - http://localhost:5003');
+                console.log('ok - http://localhost:5004');
             }
+            console.log('Inside callback, listening:', srv.listening);
+            console.log('Address:', srv.address());
 
             const sm = new ServerManager(srv, config);
 
             return resolve(sm);
+        });
+
+        srv.on('close', () => {
+            console.log('Server closed');
+        });
+
+        srv.on('error', (err) => {
+            console.error('Server error:', err);
         });
     });
 }

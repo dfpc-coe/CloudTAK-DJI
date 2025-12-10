@@ -1,4 +1,5 @@
 import fetch from '../lib/fetch.js'
+import Err from '@openaddresses/batch-error'
 import { Type } from '@sinclair/typebox'
 import Config from '../lib/config.js'
 import Schema from '@openaddresses/batch-schema'
