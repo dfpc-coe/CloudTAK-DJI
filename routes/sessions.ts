@@ -1,3 +1,3 @@
 export default async function router() {
-    console.error('Session Placeholder');
+    console.error('ok - Session Placeholder');
 }
