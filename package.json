@@ -5,9 +5,10 @@
     "description": "DJI Extension for CloudTAK",
     "main": "index.js",
     "scripts": {
-        "build": "tsc && cp package.json dist/",
+        "check": "tsc && cp package.json dist/",
         "test": "exit 0",
-        "lint": "eslint index.ts lib/ routes/",
+        "build": "node bin/build.js",
+        "lint": "eslint index.ts lib/ routes/ cloudformation/",
         "dev": "tsx watch --ignore web/ index.ts",
         "prod": "NODE_OPTIONS='--max-old-space-size=6144' node dist/index.js"
     },
