@@ -30,4 +30,33 @@ export default async function router(schema: Schema, config: Config) {
              Err.respond(err, res);
         }
     });
+
+    await schema.get('/config/login', {
+        name: 'Get Config',
+        group: 'Login',
+        res: Type.Object({
+            email: Type.String(),
+            access: Type.String()
+        })
+    }, async (req, res) => {
+        try {
+            const res = await fetch(`${config.API_URL}/api/config/login`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': req.headers.authorization || ''
+                }
+            })
+
+            console.error(await res.json());
+
+            const user = await res.typed(Type.Object({
+                email: Type.String(),
+                access: Type.Enum(AuthUserAccess)
+            }));
+
+            res.json(user);
+        } catch (err) {
+             Err.respond(err, res);
+        }
+    });
 }
