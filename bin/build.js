@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import CP from 'child_process';
 
 process.env.GITSHA = sha();
@@ -24,9 +23,12 @@ if (!process.argv[2]) {
     console.error('ok - building all containers');
 
     await cloudtak_api();
+    await cloudtak_mqtt();
 } else {
     if (process.argv[2] === 'api') {
         await cloudtak_api();
+    } else if (process.argv[2] === 'mqtt') {
+        await cloudtak_mqtt();
     } else {
         throw new Error('Unknown build target');
     }
@@ -49,15 +51,30 @@ function login() {
         $.stdout.pipe(process.stdout);
         $.stderr.pipe(process.stderr);
     });
-
 }
 
 function cloudtak_api() {
     return new Promise((resolve, reject) => {
         const $ = CP.exec(`
             docker compose build api \
-            && docker tag cloudtak-dji:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji:$\{GITSHA\}" \
+            && docker tag cloudtak-dji-api:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji:$\{GITSHA\}" \
             && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji:$\{GITSHA\}"
+        `, (err) => {
+            if (err) return reject(err);
+            return resolve();
+        });
+
+        $.stdout.pipe(process.stdout);
+        $.stderr.pipe(process.stderr);
+    });
+}
+
+function cloudtak_mqtt() {
+    return new Promise((resolve, reject) => {
+        const $ = CP.exec(`
+            docker compose build mqtt \
+            && docker tag cloudtak-dji-mqtt:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji-mqtt:$\{GITSHA\}" \
+            && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji-mqtt:$\{GITSHA\}"
         `, (err) => {
             if (err) return reject(err);
             return resolve();
@@ -76,5 +93,4 @@ function sha() {
 
     if (!git.stdout) throw Error('Is this a git repo? Could not determine GitSha');
     return String(git.stdout).replace(/\n/g, '');
-
 }

@@ -197,25 +197,7 @@ export default {
             TaskRoleArn: cf.getAtt('MQTTTaskRole', 'Arn'),
             ContainerDefinitions: [{
                 Name: 'mqtt',
-                Image: 'eclipse-mosquitto:2',
-                EntryPoint: ['/bin/sh', '-c'],
-                // Materialise mosquitto.conf + passwd from injected env, then
-                // exec mosquitto. Keeps the image stock + CF-driven.
-                Command: [[
-                    'set -eu;',
-                    'mkdir -p /mosquitto/config /mosquitto/data /mosquitto/log;',
-                    'cat > /mosquitto/config/mosquitto.conf <<EOF',
-                    'listener 1883 0.0.0.0',
-                    'persistence true',
-                    'persistence_location /mosquitto/data/',
-                    'log_dest stdout',
-                    'allow_anonymous false',
-                    'password_file /mosquitto/config/passwd',
-                    'EOF',
-                    'echo -n "$MQTT_USERNAME:$MQTT_PASSWORD" > /mosquitto/config/passwd;',
-                    'mosquitto_passwd -U /mosquitto/config/passwd;',
-                    'exec mosquitto -c /mosquitto/config/mosquitto.conf'
-                ].join('\n')],
+                Image: cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-ecr-dji-mqtt:', cf.ref('GitSha')]),
                 PortMappings: [{ ContainerPort: 1883, Protocol: 'tcp' }],
                 Environment: [
                     { Name: 'MQTT_USERNAME', Value: 'cloudtak-dji' }

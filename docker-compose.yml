@@ -8,3 +8,13 @@ services:
             - "5003:5003"
         environment:
             - API_URL=${API_URL}
+    mqtt:
+        build:
+          context: .
+          dockerfile: Dockerfile.mqtt
+        restart: 'always'
+        ports:
+            - "1883:1883"
+        environment:
+            - MQTT_USERNAME=${MQTT_USERNAME:-cloudtak-dji}
+            - MQTT_PASSWORD=${MQTT_PASSWORD:-changeme}

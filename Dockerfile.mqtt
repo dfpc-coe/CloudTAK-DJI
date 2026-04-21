@@ -1,0 +1,14 @@
+# https://hub.docker.com/_/eclipse-mosquitto
+FROM eclipse-mosquitto:2
+
+# Bake the broker config + entrypoint that materialises the password file
+# from MQTT_USERNAME / MQTT_PASSWORD env vars (the latter injected from
+# AWS Secrets Manager at task launch).
+COPY mqtt/mosquitto.conf /mosquitto/config/mosquitto.conf
+COPY mqtt/entrypoint.sh /usr/local/bin/entrypoint.sh
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 1883
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
