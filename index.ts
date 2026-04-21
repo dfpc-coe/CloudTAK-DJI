@@ -6,17 +6,19 @@ import history, {Context} from 'connect-history-api-fallback';
 import { StandardResponse } from './lib/types.js'
 import ServerManager from './lib/server.js';
 import Schema from '@openaddresses/batch-schema';
-import minimist from 'minimist';
+import { parseArgs } from 'node:util';
 import Config from './lib/config.js';
 import process from 'node:process';
+import { DJIBroker, setBroker } from './lib/mqtt.js';
+import djiCloudRouter from './lib/dji-cloud.js';
 
-const args = minimist(process.argv, {
-    boolean: [
-        'silent',   // Turn off logging as much as possible
-    ],
-    string: [
-        'env'       // Load a non-default .env file --env local would read .env-local
-    ],
+const { values: args } = parseArgs({
+    args: process.argv.slice(2),
+    options: {
+        silent: { type: 'boolean', default: false },  // Turn off logging as much as possible
+        env:    { type: 'string' }                    // Load a non-default .env file --env local would read .env-local
+    },
+    strict: false
 });
 
 try {
@@ -41,7 +43,7 @@ process.on('uncaughtExceptionMonitor', (exception, origin) => {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
     const config = await Config.env({
-        silent: args.silent || false,
+        silent: Boolean(args.silent) || false,
     });
 
     const sm = await server(config);
@@ -123,6 +125,10 @@ export default async function server(config: Config): Promise<ServerManager> {
 
     app.use('/api', schema.router);
 
+    // DJI Cloud API endpoints (consumed by DJI Pilot 2 / RC Plus directly).
+    // Mounted outside the schema's /api prefix so paths match DJI's spec.
+    app.use('/manage/api/v1', djiCloudRouter(config));
+
     await schema.api();
 
     await schema.load(
@@ -165,7 +171,15 @@ export default async function server(config: Config): Promise<ServerManager> {
             console.log('Inside callback, listening:', srv.listening);
             console.log('Address:', srv.address());
 
-            const sm = new ServerManager(srv, config);
+            // Connect to MQTT broker for DJI Thing-Model topics. Failure to
+            // connect is non-fatal; the broker auto-reconnects.
+            const broker = new DJIBroker(config);
+            setBroker(broker);
+            broker.connect().catch((err) => {
+                console.error('mqtt initial connect failed (will retry):', err);
+            });
+
+            const sm = new ServerManager(srv, config, broker);
 
             return resolve(sm);
         });

@@ -134,6 +134,7 @@ import {
     TablerError
 } from '@tak-ps/vue-tabler';
 import { std } from './std.ts';
+import type { Login } from './types.ts';
 
 const router = useRouter();
 const route = useRoute();
