@@ -19,30 +19,6 @@ export default cf.merge(
                 Type: 'String',
                 Default: 'prod'
             },
-            ComputeCpus: {
-                Description: 'Fargate Compute vCPU Units (API)',
-                Type: 'Number',
-                Default: 1024
-            },
-            ComputeMemory: {
-                Description: 'Fargate Compute Memory in MB (API)',
-                Type: 'Number',
-                Default: 8192
-            },
-            MQTTComputeCpus: {
-                Description: 'Fargate Compute vCPU Units (MQTT broker)',
-                Type: 'Number',
-                Default: 512
-            },
-            MQTTComputeMemory: {
-                Description: 'Fargate Compute Memory in MB (MQTT broker)',
-                Type: 'Number',
-                Default: 1024
-            },
-            SubdomainPrefix: {
-                Description: 'Prefix of the API/UI domain: ie "dji" of dji.example.com',
-                Type: 'String'
-            },
             MQTTSubdomainPrefix: {
                 Description: 'Prefix of the MQTT broker domain handed to DJI Pilot: ie "dji-mqtt" of dji-mqtt.example.com',
                 Type: 'String',

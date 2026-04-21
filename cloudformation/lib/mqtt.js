@@ -188,8 +188,8 @@ export default {
         Type: 'AWS::ECS::TaskDefinition',
         Properties: {
             Family: cf.join([cf.stackName, '-mqtt']),
-            Cpu: cf.ref('MQTTComputeCpus'),
-            Memory: cf.ref('MQTTComputeMemory'),
+            Cpu: 512,
+            Memory: 1024,
             NetworkMode: 'awsvpc',
             RequiresCompatibilities: ['FARGATE'],
             Tags: [{ Key: 'Name', Value: cf.join('-', [cf.stackName, 'mqtt']) }],

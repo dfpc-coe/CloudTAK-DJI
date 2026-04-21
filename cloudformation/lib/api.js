@@ -15,7 +15,7 @@ export default {
         Properties: {
             HostedZoneId: cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-hosted-zone-id'])),
             Type: 'A',
-            Name: cf.join([cf.ref('SubdomainPrefix'), '.', cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-hosted-zone-name']))]),
+            Name: cf.join(['dji.', cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-hosted-zone-name']))]),
             Comment: cf.join(' ', [cf.stackName, 'DNS Entry']),
             AliasTarget: {
                 DNSName: cf.getAtt('ELB', 'DNSName'),
@@ -69,8 +69,8 @@ export default {
         Type: 'AWS::ECS::TaskDefinition',
         Properties: {
             Family: cf.join([cf.stackName, '-service']),
-            Cpu: cf.ref('ComputeCpus'),
-            Memory: cf.ref('ComputeMemory'),
+            Cpu: 1024,
+            Memory: 8192,
             NetworkMode: 'awsvpc',
             RequiresCompatibilities: ['FARGATE'],
             Tags: [{ Key: 'Name', Value: cf.join('-', [cf.stackName, 'api']) }],
