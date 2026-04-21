@@ -12,8 +12,8 @@
     ],
     "artifacts": {
         "docker": [
-            "coe-ecr-dji:{{gitsha}}",
-            "coe-ecr-dji-mqtt:{{gitsha}}"
+            "coe-ecr-dji:{{gitsha}}-api",
+            "coe-ecr-dji:{{gitsha}}-mqtt"
         ]
     }
 }

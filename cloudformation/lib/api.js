@@ -78,7 +78,7 @@ export default {
             TaskRoleArn: cf.getAtt('TaskRole', 'Arn'),
             ContainerDefinitions: [{
                 Name: 'api',
-                Image: cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-ecr-dji:', cf.ref('GitSha')]),
+                Image: cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-ecr-dji:', cf.ref('GitSha'), '-api']),
                 PortMappings: [{
                     ContainerPort: 5004,
                     Protocol: 'tcp'

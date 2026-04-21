@@ -197,7 +197,7 @@ export default {
             TaskRoleArn: cf.getAtt('MQTTTaskRole', 'Arn'),
             ContainerDefinitions: [{
                 Name: 'mqtt',
-                Image: cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-ecr-dji-mqtt:', cf.ref('GitSha')]),
+                Image: cf.join([cf.accountId, '.dkr.ecr.', cf.region, '.amazonaws.com/coe-ecr-dji:', cf.ref('GitSha'), '-mqtt']),
                 PortMappings: [{ ContainerPort: 1883, Protocol: 'tcp' }],
                 Environment: [
                     { Name: 'MQTT_USERNAME', Value: 'cloudtak-dji' }
