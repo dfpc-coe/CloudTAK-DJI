@@ -1,5 +1,5 @@
 import Err from '@openaddresses/batch-error';
-import { Static, TSchema, TUnknown } from "@sinclair/typebox";
+import type { Static, TSchema, TUnknown } from "@sinclair/typebox";
 import { TypeCompiler } from "@sinclair/typebox/compiler";
 import { fetch, Response } from 'undici';
 import type { RequestInfo, RequestInit } from 'undici';

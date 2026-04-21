@@ -1,4 +1,5 @@
-import mqtt, { MqttClient, IClientOptions, IClientPublishOptions } from 'mqtt';
+import mqtt from 'mqtt';
+import type { MqttClient, IClientOptions, IClientPublishOptions } from 'mqtt';
 import crypto from 'node:crypto';
 import type Config from './config.js';
 import { devices } from './devices.js';
@@ -86,7 +87,7 @@ export class DJIBroker {
         const parsed = this.parseTopic(topic);
         if (!parsed) return;
 
-        let body: Record<string, unknown> = {};
+        let body: Record<string, unknown>;
         try {
             body = JSON.parse(payload.toString('utf8')) as Record<string, unknown>;
         } catch {

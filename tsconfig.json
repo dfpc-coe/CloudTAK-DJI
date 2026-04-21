@@ -4,17 +4,18 @@
         "strictNullChecks": true,
         "esModuleInterop": true,
         "skipLibCheck": true,
-        "module": "es2022",
+        "module": "nodenext",
         "target": "es2022",
-        "moduleResolution": "node",
+        "moduleResolution": "nodenext",
+        "verbatimModuleSyntax": true,
         "sourceMap": true,
-        "outDir": "dist",
-        "baseUrl": "."
+        "outDir": "dist"
     },
     "exclude": [],
     "include": [
         "*.ts",
         "routes/",
+        "test/",
         "lib/"
     ]
 }

@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import cors from 'cors';
 import express from 'express';
-import history, {Context} from 'connect-history-api-fallback';
+import type {Context} from 'connect-history-api-fallback';
+import history from 'connect-history-api-fallback';
 import { StandardResponse } from './lib/types.js'
 import ServerManager from './lib/server.js';
 import Schema from '@openaddresses/batch-schema';
