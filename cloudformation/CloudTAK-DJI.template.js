@@ -19,10 +19,6 @@ export default cf.merge(
                 Type: 'String',
                 Default: 'prod'
             },
-            CloudTAKURL: {
-                Description: 'Base URL of the upstream CloudTAK API (no trailing slash)',
-                Type: 'String'
-            },
             WorkspaceId: {
                 Description: 'DJI Cloud API workspace_id handed back to DJI Pilot',
                 Type: 'String',
@@ -33,10 +29,6 @@ export default cf.merge(
                 Type: 'String',
                 AllowedValues: ['true', 'false'],
                 Default: 'false'
-            },
-            SSLCertificateIdentifier: {
-                Description: 'ACM SSL Certificate for top level wildcard: *.example.com',
-                Type: 'String'
             }
         }
     },

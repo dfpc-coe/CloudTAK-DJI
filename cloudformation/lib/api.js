@@ -38,6 +38,10 @@ export default {
             Type: 'network',
             Scheme: 'internet-facing',
             SecurityGroups: [cf.ref('ELBSecurityGroup')],
+            Subnets: [
+                cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-subnet-public-a'])),
+                cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-subnet-public-b']))
+            ],
             LoadBalancerAttributes: [{
                 Key: 'access_logs.s3.enabled',
                 Value: true
@@ -86,7 +90,10 @@ export default {
                 Environment: [
                     { Name: 'StackName', Value: cf.stackName },
                     { Name: 'Environment', Value: cf.ref('Environment') },
-                    { Name: 'API_URL', Value: cf.ref('CloudTAKURL') },
+                    {
+                        Name: 'API_URL',
+                        Value: cf.join(['https://map.', cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-hosted-zone-name']))])
+                    },
                     { Name: 'AWS_REGION', Value: cf.region },
                     { Name: 'WORKSPACE_ID', Value: cf.ref('WorkspaceId') },
                     {
@@ -252,7 +259,7 @@ export default {
         Type: 'AWS::ElasticLoadBalancingV2::Listener',
         Properties: {
             Certificates: [{
-                CertificateArn: cf.join(['arn:', cf.partition, ':acm:', cf.region, ':', cf.accountId, ':certificate/', cf.ref('SSLCertificateIdentifier')])
+                CertificateArn: cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-acm']))
             }],
             DefaultActions: [{
                 Type: 'forward',
@@ -266,7 +273,6 @@ export default {
     TargetGroupApi: {
         Type: 'AWS::ElasticLoadBalancingV2::TargetGroup',
         Properties: {
-            Name: cf.join('-', [cf.stackName, 'api-tg']),
             Port: 5004,
             Protocol: 'TCP',
             TargetType: 'ip',
