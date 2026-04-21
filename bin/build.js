@@ -57,8 +57,8 @@ function cloudtak_api() {
     return new Promise((resolve, reject) => {
         const $ = CP.exec(`
             docker compose build api \
-            && docker tag cloudtak-dji-api:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji:$\{GITSHA\}-api" \
-            && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji:$\{GITSHA\}-api"
+            && docker tag cloudtak-dji-api:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:api-$\{GITSHA\}" \
+            && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:api-$\{GITSHA\}"
         `, (err) => {
             if (err) return reject(err);
             return resolve();
@@ -73,8 +73,8 @@ function cloudtak_mqtt() {
     return new Promise((resolve, reject) => {
         const $ = CP.exec(`
             docker compose build mqtt \
-            && docker tag cloudtak-dji-mqtt:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji:$\{GITSHA\}-mqtt" \
-            && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/coe-ecr-dji:$\{GITSHA\}-mqtt"
+            && docker tag cloudtak-dji-mqtt:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:mqtt-$\{GITSHA\}" \
+            && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:mqtt-$\{GITSHA\}"
         `, (err) => {
             if (err) return reject(err);
             return resolve();

@@ -12,8 +12,8 @@
     ],
     "artifacts": {
         "docker": [
-            "coe-ecr-dji:{{gitsha}}-api",
-            "coe-ecr-dji:{{gitsha}}-mqtt"
+            "tak-vpc-{{stack}}-cloudtak-dji:api-{{gitsha}}",
+            "tak-vpc-{{stack}}-cloudtak-dji:mqtt-{{gitsha}}"
         ]
     }
 }
