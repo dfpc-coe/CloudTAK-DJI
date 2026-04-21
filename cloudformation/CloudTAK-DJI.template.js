@@ -19,11 +19,6 @@ export default cf.merge(
                 Type: 'String',
                 Default: 'prod'
             },
-            MQTTSubdomainPrefix: {
-                Description: 'Prefix of the MQTT broker domain handed to DJI Pilot: ie "dji-mqtt" of dji-mqtt.example.com',
-                Type: 'String',
-                Default: 'dji-mqtt'
-            },
             CloudTAKURL: {
                 Description: 'Base URL of the upstream CloudTAK API (no trailing slash)',
                 Type: 'String'

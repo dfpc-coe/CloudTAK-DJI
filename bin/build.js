@@ -23,12 +23,10 @@ if (!process.argv[2]) {
     console.error('ok - building all containers');
 
     await cloudtak_api();
-    await cloudtak_mqtt();
 } else {
     if (process.argv[2] === 'api') {
         await cloudtak_api();
     } else if (process.argv[2] === 'mqtt') {
-        await cloudtak_mqtt();
     } else {
         throw new Error('Unknown build target');
     }
@@ -59,22 +57,6 @@ function cloudtak_api() {
             docker compose build api \
             && docker tag cloudtak-dji-api:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:api-$\{GITSHA\}" \
             && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:api-$\{GITSHA\}"
-        `, (err) => {
-            if (err) return reject(err);
-            return resolve();
-        });
-
-        $.stdout.pipe(process.stdout);
-        $.stderr.pipe(process.stderr);
-    });
-}
-
-function cloudtak_mqtt() {
-    return new Promise((resolve, reject) => {
-        const $ = CP.exec(`
-            docker compose build mqtt \
-            && docker tag cloudtak-dji-mqtt:latest "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:mqtt-$\{GITSHA\}" \
-            && docker push "$\{AWS_ACCOUNT_ID\}.dkr.ecr.$\{AWS_REGION\}.amazonaws.com/tak-vpc-${process.env.Environment}-cloudtak-dji:mqtt-$\{GITSHA\}"
         `, (err) => {
             if (err) return reject(err);
             return resolve();

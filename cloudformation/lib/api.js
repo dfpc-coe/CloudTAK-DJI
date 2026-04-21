@@ -4,9 +4,9 @@ import cf from '@openaddresses/cloudfriend';
  * CloudTAK-DJI API + Web UI service.
  *
  * Sits behind its own internet-facing NLB on TCP 443. The container reads
- * upstream CloudTAK and MQTT broker coordinates from environment variables;
- * the JWT signing secret and MQTT password are injected from Secrets
- * Manager (see lib/secrets.js, lib/mqtt.js).
+ * upstream CloudTAK and AWS IoT Core MQTT coordinates from environment
+ * variables; the JWT signing secret and the IoT Core shared password are
+ * injected from Secrets Manager.
  */
 export default {
   Resources: {
@@ -89,23 +89,21 @@ export default {
                     { Name: 'API_URL', Value: cf.ref('CloudTAKURL') },
                     { Name: 'AWS_REGION', Value: cf.region },
                     { Name: 'WORKSPACE_ID', Value: cf.ref('WorkspaceId') },
-                    // The API container talks to the broker via the MQTT NLB
-                    // (DNS resolves inside the VPC just fine).
                     {
                         Name: 'MQTT_URL',
-                        Value: cf.join(['mqtt://', cf.getAtt('MQTTELB', 'DNSName'), ':1883'])
+                        Value: cf.join(['mqtts://', cf.getAtt('IotDataEndpoint', 'EndpointAddress'), ':443'])
                     },
-                    // What we hand back to DJI Pilot in /manage/api/v1/iam/login.
                     {
                         Name: 'MQTT_PUBLIC_URL',
-                        Value: cf.join([
-                            'mqtt://',
-                            cf.ref('MQTTSubdomainPrefix'), '.',
-                            cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-hosted-zone-name'])),
-                            ':1883'
-                        ])
+                        Value: cf.join(['mqtts://', cf.getAtt('IotDataEndpoint', 'EndpointAddress'), ':443'])
                     },
-                    { Name: 'MQTT_USERNAME', Value: 'cloudtak-dji' }
+                    {
+                        Name: 'MQTT_USERNAME',
+                        Value: cf.join([
+                            'cloudtak-dji?x-amz-customauthorizer-name=',
+                            cf.join([cf.stackName, '-mqtt-auth'])
+                        ])
+                    }
                 ],
                 Secrets: [
                     {
@@ -159,7 +157,8 @@ export default {
                         Effect: 'Allow',
                         Action: ['secretsmanager:GetSecretValue', 'secretsmanager:DescribeSecret'],
                         Resource: [
-                            cf.join(['arn:', cf.partition, ':secretsmanager:', cf.region, ':', cf.accountId, ':secret:', cf.stackName, '/*'])
+                            cf.ref('APISigningSecret'),
+                            cf.ref('MQTTPasswordSecret')
                         ]
                     }]
                 }
@@ -209,7 +208,7 @@ export default {
     },
     Service: {
         Type: 'AWS::ECS::Service',
-        DependsOn: ['ListenerApi', 'MQTTService'],
+        DependsOn: ['ListenerApi'],
         Properties: {
             ServiceName: cf.join('-', [cf.stackName, 'Service']),
             Cluster: cf.join(['tak-vpc-', cf.ref('Environment')]),
