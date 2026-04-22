@@ -22,6 +22,21 @@ export default cf.merge(
                 Type: 'String',
                 Default: 'default-workspace'
             },
+            PlatformName: {
+                Description: 'Display name for the Pilot "Cloud Service" tile (platformSetInformation). Without this, the tile stays "Not Logged In" even when MQTT is connected.',
+                Type: 'String',
+                Default: 'CloudTAK'
+            },
+            WorkspaceName: {
+                Description: 'Workspace display name shown on the Pilot "Cloud Service" tile.',
+                Type: 'String',
+                Default: 'CloudTAK'
+            },
+            WorkspaceDesc: {
+                Description: 'Optional description shown on the Pilot "Cloud Service" tile.',
+                Type: 'String',
+                Default: ''
+            },
             MediaURL: {
                 Description: 'Base RTMP URL of the operator-supplied media server (e.g. rtmp://media.example.com:1935/live). Required for DJI Pilot livestream pushes; leave empty to require an explicit `url` per livestream API call.',
                 Type: 'String',

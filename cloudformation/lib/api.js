@@ -113,6 +113,9 @@ export default {
                     },
                     { Name: 'AWS_REGION', Value: cf.region },
                     { Name: 'WORKSPACE_ID', Value: cf.ref('WorkspaceId') },
+                    { Name: 'PLATFORM_NAME', Value: cf.ref('PlatformName') },
+                    { Name: 'WORKSPACE_NAME', Value: cf.ref('WorkspaceName') },
+                    { Name: 'WORKSPACE_DESC', Value: cf.ref('WorkspaceDesc') },
                     {
                         // The api process talks to the in-task broker
                         // over loopback.

@@ -24,6 +24,13 @@ export default class Config {
     /** Default workspace handed back to Pilot in IAM responses. */
     WORKSPACE_ID: string;
 
+    /** Display name for the Pilot Cloud Service tile (platformSetInformation). */
+    PLATFORM_NAME: string;
+    /** Workspace display name shown on the Pilot Cloud Service tile. */
+    WORKSPACE_NAME: string;
+    /** Optional workspace description shown on the Pilot Cloud Service tile. */
+    WORKSPACE_DESC: string;
+
     /**
      * Base RTMP URL of the operator-supplied media server (e.g.
      * `rtmp://media.example.com:1935/live`). When set, livestream
@@ -54,6 +61,9 @@ export default class Config {
         MQTT_PASSWORD?: string;
         MQTT_PUBLIC_URL: string;
         WORKSPACE_ID: string;
+        PLATFORM_NAME: string;
+        WORKSPACE_NAME: string;
+        WORKSPACE_DESC: string;
         MEDIA_URL?: string;
         DJI_APP_ID?: number;
         DJI_APP_KEY?: string;
@@ -68,6 +78,9 @@ export default class Config {
         this.MQTT_PASSWORD = init.MQTT_PASSWORD;
         this.MQTT_PUBLIC_URL = init.MQTT_PUBLIC_URL;
         this.WORKSPACE_ID = init.WORKSPACE_ID;
+        this.PLATFORM_NAME = init.PLATFORM_NAME;
+        this.WORKSPACE_NAME = init.WORKSPACE_NAME;
+        this.WORKSPACE_DESC = init.WORKSPACE_DESC;
         this.MEDIA_URL = init.MEDIA_URL;
         this.DJI_APP_ID = init.DJI_APP_ID;
         this.DJI_APP_KEY = init.DJI_APP_KEY;
@@ -96,6 +109,9 @@ export default class Config {
         const MQTT_URL = process.env.MQTT_URL || 'mqtt://localhost:1883';
         const MQTT_PUBLIC_URL = process.env.MQTT_PUBLIC_URL || MQTT_URL;
         const WORKSPACE_ID = process.env.WORKSPACE_ID || 'default-workspace';
+        const PLATFORM_NAME = process.env.PLATFORM_NAME || 'CloudTAK';
+        const WORKSPACE_NAME = process.env.WORKSPACE_NAME || PLATFORM_NAME;
+        const WORKSPACE_DESC = process.env.WORKSPACE_DESC || '';
         const MEDIA_URL = process.env.MEDIA_URL
             ? process.env.MEDIA_URL.replace(/\/+$/, '')
             : undefined;
@@ -119,6 +135,9 @@ export default class Config {
             MQTT_PASSWORD: process.env.MQTT_PASSWORD,
             MQTT_PUBLIC_URL,
             WORKSPACE_ID,
+            PLATFORM_NAME,
+            WORKSPACE_NAME,
+            WORKSPACE_DESC,
             MEDIA_URL,
             DJI_APP_ID,
             DJI_APP_KEY: process.env.DJI_APP_KEY || undefined,

@@ -228,7 +228,79 @@ export async function bootstrapDJIBridge(): Promise<void> {
         pushLog('warn', 'thingGetConnectState is not exposed on this firmware');
     }
 
+    // Step 5: load the `api` component so Pilot can call our REST API.
+    // Failure here is non-fatal (older firmwares lack /manage/api/v1
+    // dependencies), but most of the Cloud Service tile depends on it.
+    loadOptionalComponent(bridge, 'api', JSON.stringify({
+        host: cfg.api.host,
+        token: cfg.api.token
+    }));
+
+    // Step 6: load the `ws` component for realtime updates Pilot pushes
+    // into the platform (binding completion, mission progress, etc.).
+    loadOptionalComponent(bridge, 'ws', JSON.stringify({
+        host: cfg.ws.host,
+        token: cfg.ws.token,
+        connectCallback: 'cloudtakDjiBridgeCallback'
+    }));
+
+    // Step 7: load `liveshare` so the Cloud-issued `live_start_push`
+    // service can actually deliver video. `videoPublishType` controls
+    // whether Pilot waits for the user to approve each push:
+    //   0 = manual share button on Pilot (used by the Live page)
+    //   1 = automatic on demand (recommended for headless cloud control)
+    //   2 = mixed (manual + on-demand)
+    loadOptionalComponent(bridge, 'liveshare', JSON.stringify({
+        videoPublishType: 'video-on-demand'
+    }));
+
+    // Step 8: tell Pilot which workspace and platform we are. This is
+    // what flips the Pilot main-page Cloud Service tile from
+    // "Not Logged In" to the configured platform name. Without these
+    // calls the tile stays unset even when MQTT is fully online.
+    if (typeof bridge.platformSetWorkspaceId === 'function') {
+        const wsRaw = bridge.platformSetWorkspaceId(cfg.workspace_id);
+        pushLog('info', `platformSetWorkspaceId("${cfg.workspace_id}") → ${wsRaw}`);
+        parseBridgeResult('platformSetWorkspaceId', wsRaw);
+    } else {
+        pushLog('warn', 'platformSetWorkspaceId not exposed — Pilot tile may stay "Not Logged In"');
+    }
+
+    if (typeof bridge.platformSetInformation === 'function') {
+        const infoRaw = bridge.platformSetInformation(
+            cfg.platform_name,
+            cfg.workspace_name,
+            cfg.workspace_desc
+        );
+        pushLog('info', `platformSetInformation("${cfg.platform_name}", "${cfg.workspace_name}", "${cfg.workspace_desc}") → ${infoRaw}`);
+        parseBridgeResult('platformSetInformation', infoRaw);
+    } else {
+        pushLog('warn', 'platformSetInformation not exposed — Pilot tile may stay "Not Logged In"');
+    }
+
     pushLog('info', 'bootstrap complete');
+}
+
+/**
+ * Load a non-`thing` component (api / ws / liveshare). These components
+ * are not exposed by every firmware revision; their absence should not
+ * break the rest of the bootstrap, so we log + continue rather than
+ * throw. The redacted JSON params are recorded for diagnostics.
+ */
+function loadOptionalComponent(bridge: NonNullable<Window['djiBridge']>, name: string, params: string): void {
+    const redacted = params.replace(/("token"|"password")\s*:\s*"[^"]*"/g, '$1:"<redacted>"');
+    try {
+        const raw = bridge.platformLoadComponent(name, params);
+        pushLog('info', `platformLoadComponent("${name}", ${redacted}) → ${raw}`);
+        try {
+            parseBridgeResult(`platformLoadComponent(${name})`, raw);
+            pushLog('info', `platformIsComponentLoaded("${name}") → ${bridge.platformIsComponentLoaded(name)}`);
+        } catch (err) {
+            pushLog('warn', `optional component ${name} returned non-zero: ${(err as Error).message}`);
+        }
+    } catch (err) {
+        pushLog('warn', `optional component ${name} threw: ${(err as Error).message}`);
+    }
 }
 
 /**
@@ -245,21 +317,37 @@ export function teardownDJIBridge(): void {
     if (!isDJIBridgeAvailable()) return;
 
     const bridge = window.djiBridge!;
-    try {
-        if (bridge.platformIsComponentLoaded('thing')) {
-            const raw = bridge.platformUnloadComponent('thing');
-            pushLog('info', `platformUnloadComponent("thing") → ${raw}`);
-            // Best-effort parse — log but do not throw, because logout
-            // should always succeed from the user's perspective.
-            try {
-                parseBridgeResult('platformUnloadComponent(thing)', raw);
-            } catch (err) {
-                pushLog('warn', `unload returned non-zero result: ${(err as Error).message}`);
+    // Unload in reverse load order. Each call is best-effort because
+    // logout must always succeed from the user's perspective.
+    for (const name of ['liveshare', 'ws', 'api', 'thing']) {
+        try {
+            if (bridge.platformIsComponentLoaded(name)) {
+                const raw = bridge.platformUnloadComponent(name);
+                pushLog('info', `platformUnloadComponent("${name}") → ${raw}`);
+                try {
+                    parseBridgeResult(`platformUnloadComponent(${name})`, raw);
+                } catch (err) {
+                    pushLog('warn', `unload ${name} returned non-zero: ${(err as Error).message}`);
+                }
             }
+        } catch (err) {
+            pushLog('error', `failed to unload ${name} component: ${(err as Error).message}`);
+        }
+    }
+
+    // Reset the Pilot Cloud Service tile back to "Not Logged In" by
+    // blanking platform info. Older firmwares may not expose these.
+    try {
+        if (typeof bridge.platformSetInformation === 'function') {
+            bridge.platformSetInformation('', '', '');
+        }
+        if (typeof bridge.platformSetWorkspaceId === 'function') {
+            bridge.platformSetWorkspaceId('');
         }
     } catch (err) {
-        pushLog('error', `failed to unload thing component: ${(err as Error).message}`);
+        pushLog('warn', `failed to clear platform info: ${(err as Error).message}`);
     }
+
     lastConnectCallback = undefined;
 }
 

@@ -44,11 +44,26 @@ export default async function router(schema: Schema, config: Config) {
                 throw new Err(401, null, 'Authentication Required');
             }
             // Validate session before exposing license material.
-            verify(config, header.slice('Bearer '.length).trim());
+            const token = header.slice('Bearer '.length).trim();
+            verify(config, token);
 
             const configured = Boolean(
                 config.DJI_APP_ID && config.DJI_APP_KEY && config.DJI_APP_LICENSE
             );
+
+            // Resolve a self-referential public URL for the api/ws bridge
+            // components. Pilot calls these from outside the controller's
+            // browser context (native HTTP client), so it must be a host
+            // it can resolve. Honour the X-Forwarded-Host the NLB-fronted
+            // certificate sees; fall back to the request Host header.
+            const xfHost = req.headers['x-forwarded-host'];
+            const xfProto = req.headers['x-forwarded-proto'];
+            const host = (Array.isArray(xfHost) ? xfHost[0] : xfHost)
+                ?? req.headers['host']
+                ?? 'localhost';
+            const proto = (Array.isArray(xfProto) ? xfProto[0] : xfProto) ?? 'https';
+            const apiHost = `${proto}://${host}`;
+            const wsHost = `${proto === 'https' ? 'wss' : 'ws'}://${host}`;
 
             res.json({
                 configured,
@@ -56,6 +71,11 @@ export default async function router(schema: Schema, config: Config) {
                 app_key: config.DJI_APP_KEY,
                 license: config.DJI_APP_LICENSE,
                 workspace_id: config.WORKSPACE_ID,
+                platform_name: config.PLATFORM_NAME,
+                workspace_name: config.WORKSPACE_NAME,
+                workspace_desc: config.WORKSPACE_DESC,
+                api: { host: apiHost, token },
+                ws:  { host: wsHost,  token },
                 mqtt: {
                     host: config.MQTT_PUBLIC_URL,
                     username: config.MQTT_USERNAME ?? '',

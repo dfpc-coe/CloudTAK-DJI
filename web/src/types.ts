@@ -43,6 +43,21 @@ export interface DJIBridgeConfig {
     app_key?: string;
     license?: string;
     workspace_id: string;
+    /** Display name of the platform shown on the Pilot Cloud Service tile. */
+    platform_name: string;
+    /** Display name of the workspace shown on the Pilot Cloud Service tile. */
+    workspace_name: string;
+    /** Optional description shown on the Pilot Cloud Service tile. */
+    workspace_desc: string;
+    /** Bearer token for the api/ws components and HTTP base URL. */
+    api: {
+        host: string;
+        token: string;
+    };
+    ws: {
+        host: string;
+        token: string;
+    };
     mqtt: {
         host: string;
         username: string;
@@ -61,6 +76,23 @@ export interface DJIBridge {
     platformLoadComponent(name: string, params: string): string;
     platformIsComponentLoaded(name: string): boolean;
     platformUnloadComponent(name: string): string;
+    /**
+     * Tell the controller which workspace this session belongs to.
+     * Required for the Pilot main-page "Cloud Service" tile to flip
+     * away from "Not Logged In".
+     */
+    platformSetWorkspaceId?(workspaceId: string): string;
+    /**
+     * Tell the controller the human-friendly platform name shown on
+     * the Pilot main-page Cloud Service tile. Without this call Pilot
+     * keeps the tile in its default "Not Logged In" state even when
+     * the `thing` MQTT component is fully connected.
+     */
+    platformSetInformation?(platformName: string, workspaceName: string, desc: string): string;
+    /** Returns the workspace id currently set, JSON-encoded. */
+    platformGetWorkspaceId?(): string;
+    /** Returns the platform/workspace info currently set, JSON-encoded. */
+    platformGetInformation?(): string;
     thingGetConnectState?(): string;
     thingConnect?(username: string, password: string, callback: string): string;
 }

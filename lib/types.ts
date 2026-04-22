@@ -44,6 +44,17 @@ export const CloudTAKConfigDJIRes = Type.Object({
     app_key: Type.Optional(Type.String()),
     license: Type.Optional(Type.String()),
     workspace_id: Type.String(),
+    platform_name: Type.String(),
+    workspace_name: Type.String(),
+    workspace_desc: Type.String(),
+    api: Type.Object({
+        host: Type.String(),
+        token: Type.String()
+    }),
+    ws: Type.Object({
+        host: Type.String(),
+        token: Type.String()
+    }),
     mqtt: Type.Object({
         host: Type.String(),
         username: Type.String(),
