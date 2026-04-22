@@ -47,6 +47,9 @@ DJI Pilot 2 ──► /manage/api/v1/iam/login ──► federates to CloudTAK l
 | `MQTT_USERNAME`   | Optional broker creds                                         | —                          |
 | `MQTT_PASSWORD`   | Optional broker creds                                         | —                          |
 | `WORKSPACE_ID`    | Workspace handed back in IAM responses                        | `default-workspace`        |
+| `DJI_APP_ID`      | DJI Pilot Cloud-API `app_id` (integer issued by DJI)          | —                          |
+| `DJI_APP_KEY`     | DJI Pilot Cloud-API `app_key`                                 | —                          |
+| `DJI_APP_LICENSE` | DJI Pilot Cloud-API license string                            | —                          |
 | `RTMP_HOST`       | Host included in the default `live_start_push` URL            | `media-infra`              |
 
 ## Develop
