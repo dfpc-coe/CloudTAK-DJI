@@ -31,6 +31,46 @@ export interface LoginConfig {
     signup?: string;
 }
 
+/**
+ * Bootstrap payload returned by `/api/config/dji`. Surfaces the DJI Pilot
+ * Cloud-API app credentials plus MQTT coordinates to the controller's
+ * web view so it can call `window.djiBridge.platformVerifyLicense` and
+ * `platformLoadComponent('thing', ...)` after sign-in.
+ */
+export interface DJIBridgeConfig {
+    configured: boolean;
+    app_id?: number;
+    app_key?: string;
+    license?: string;
+    workspace_id: string;
+    mqtt: {
+        host: string;
+        username: string;
+        password: string;
+    };
+}
+
+/**
+ * Subset of the `window.djiBridge` interface the controller's web view
+ * exposes. Defined here so we can guard usage inside a regular browser
+ * (where `djiBridge` is undefined) without fighting the type system.
+ */
+export interface DJIBridge {
+    platformVerifyLicense(appId: number, appKey: string, license: string): string;
+    platformIsVerified(): boolean;
+    platformLoadComponent(name: string, params: string): string;
+    platformIsComponentLoaded(name: string): boolean;
+    platformUnloadComponent(name: string): string;
+    thingGetConnectState?(): string;
+    thingConnect?(username: string, password: string, callback: string): string;
+}
+
+declare global {
+    interface Window {
+        djiBridge?: DJIBridge;
+    }
+}
+
 /* DJI Cloud API surfaced types (subset) */
 
 export interface DJIDevice {

@@ -8,7 +8,8 @@ import {
     CloudTAKLoginRes,
     CloudTAKLoginCreate,
     CloudTAKLoginCreateRes,
-    CloudTAKConfigLoginRes
+    CloudTAKConfigLoginRes,
+    CloudTAKConfigDJIRes
 } from '../lib/types.js'
 
 /**
@@ -27,6 +28,40 @@ export default async function router(schema: Schema, config: Config) {
             const upstream = await fetch(`${config.API_URL}/api/config/login`);
             const body = await upstream.typed(CloudTAKConfigLoginRes);
             res.json(body);
+        } catch (err) {
+            Err.respond(err, res);
+        }
+    });
+
+    await schema.get('/config/dji', {
+        name: 'Get DJI Bridge Config',
+        group: 'Login',
+        res: CloudTAKConfigDJIRes
+    }, async (req, res) => {
+        try {
+            const header = req.headers['authorization'];
+            if (!header || !header.startsWith('Bearer ')) {
+                throw new Err(401, null, 'Authentication Required');
+            }
+            // Validate session before exposing license material.
+            verify(config, header.slice('Bearer '.length).trim());
+
+            const configured = Boolean(
+                config.DJI_APP_ID && config.DJI_APP_KEY && config.DJI_APP_LICENSE
+            );
+
+            res.json({
+                configured,
+                app_id: config.DJI_APP_ID,
+                app_key: config.DJI_APP_KEY,
+                license: config.DJI_APP_LICENSE,
+                workspace_id: config.WORKSPACE_ID,
+                mqtt: {
+                    host: config.MQTT_PUBLIC_URL,
+                    username: config.MQTT_USERNAME ?? '',
+                    password: config.MQTT_PASSWORD ?? ''
+                }
+            });
         } catch (err) {
             Err.respond(err, res);
         }

@@ -134,6 +134,7 @@ import { ref, onMounted } from 'vue';
 import { useBrandStore } from '../stores/brand.ts';
 import { useRouter, useRoute } from 'vue-router'
 import { std } from '../std.ts';
+import { bootstrapDJIBridge, isDJIBridgeAvailable } from '../dji-bridge.ts';
 import {
     TablerLoading,
     TablerInput
@@ -182,6 +183,20 @@ async function createLogin() {
         }) as Login_CreateRes
 
         localStorage.token = login.token;
+
+        // When the page is hosted inside the DJI Pilot/RC Pro web view, hand
+        // the controller its app license + MQTT coordinates so the in-app
+        // "Cloud Service" tile flips to "Logged In" and devices begin to
+        // report into the fleet view. Failures here are surfaced but should
+        // not block the regular browser experience.
+        if (isDJIBridgeAvailable()) {
+            try {
+                await bootstrapDJIBridge();
+            } catch (bridgeErr) {
+                console.error('DJI bridge bootstrap failed:', bridgeErr);
+                throw bridgeErr;
+            }
+        }
 
         emit('login');
 

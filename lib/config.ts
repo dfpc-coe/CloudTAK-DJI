@@ -24,6 +24,17 @@ export default class Config {
     /** Default workspace handed back to Pilot in IAM responses. */
     WORKSPACE_ID: string;
 
+    /**
+     * DJI Pilot/RC Pro Cloud-API license. These are issued by DJI to the
+     * deploying organisation per app and must be passed into the
+     * `window.djiBridge.platformVerifyLicense(appId, appKey, license)` call
+     * the controller's web-view runs after sign-in. Without them the Cloud
+     * tile in DJI Fly stays "Not Logged In" and no devices appear.
+     */
+    DJI_APP_ID?: number;
+    DJI_APP_KEY?: string;
+    DJI_APP_LICENSE?: string;
+
     constructor(init: {
         silent: boolean;
         StackName: string;
@@ -34,6 +45,9 @@ export default class Config {
         MQTT_PASSWORD?: string;
         MQTT_PUBLIC_URL: string;
         WORKSPACE_ID: string;
+        DJI_APP_ID?: number;
+        DJI_APP_KEY?: string;
+        DJI_APP_LICENSE?: string;
     }) {
         this.silent = init.silent;
         this.StackName = init.StackName;
@@ -44,6 +58,9 @@ export default class Config {
         this.MQTT_PASSWORD = init.MQTT_PASSWORD;
         this.MQTT_PUBLIC_URL = init.MQTT_PUBLIC_URL;
         this.WORKSPACE_ID = init.WORKSPACE_ID;
+        this.DJI_APP_ID = init.DJI_APP_ID;
+        this.DJI_APP_KEY = init.DJI_APP_KEY;
+        this.DJI_APP_LICENSE = init.DJI_APP_LICENSE;
     }
 
     static async env(args: ConfigArgs): Promise<Config> {
@@ -69,6 +86,15 @@ export default class Config {
         const MQTT_PUBLIC_URL = process.env.MQTT_PUBLIC_URL || MQTT_URL;
         const WORKSPACE_ID = process.env.WORKSPACE_ID || 'default-workspace';
 
+        let DJI_APP_ID: number | undefined;
+        if (process.env.DJI_APP_ID) {
+            const parsed = Number(process.env.DJI_APP_ID);
+            if (!Number.isInteger(parsed) || parsed <= 0) {
+                throw new Error(`DJI_APP_ID must be a positive integer (got ${process.env.DJI_APP_ID})`);
+            }
+            DJI_APP_ID = parsed;
+        }
+
         const config = new Config({
             silent: (args.silent || false),
             StackName: process.env.StackName,
@@ -78,7 +104,10 @@ export default class Config {
             MQTT_USERNAME: process.env.MQTT_USERNAME,
             MQTT_PASSWORD: process.env.MQTT_PASSWORD,
             MQTT_PUBLIC_URL,
-            WORKSPACE_ID
+            WORKSPACE_ID,
+            DJI_APP_ID,
+            DJI_APP_KEY: process.env.DJI_APP_KEY || undefined,
+            DJI_APP_LICENSE: process.env.DJI_APP_LICENSE || undefined
         });
 
         if (!config.silent) {
@@ -86,6 +115,9 @@ export default class Config {
             console.error(`ok - StackName: ${config.StackName}`);
             console.error(`ok - API_URL: ${config.API_URL}`);
             console.error(`ok - MQTT_URL: ${config.MQTT_URL}`);
+            console.error(`ok - DJI_APP_ID: ${config.DJI_APP_ID ?? '(unset)'}`);
+            console.error(`ok - DJI_APP_KEY: ${config.DJI_APP_KEY ? '(set)' : '(unset)'}`);
+            console.error(`ok - DJI_APP_LICENSE: ${config.DJI_APP_LICENSE ? '(set)' : '(unset)'}`);
         }
 
         return config;

@@ -110,7 +110,10 @@ export default {
                             'cloudtak-dji?x-amz-customauthorizer-name=',
                             cf.join([cf.stackName, '-mqtt-auth'])
                         ])
-                    }
+                    },
+                    { Name: 'DJI_APP_ID', Value: cf.ref('DJIAppId') },
+                    { Name: 'DJI_APP_KEY', Value: cf.ref('DJIAppKey') },
+                    { Name: 'DJI_APP_LICENSE', Value: cf.ref('DJIAppLicense') }
                 ],
                 Secrets: [
                     {

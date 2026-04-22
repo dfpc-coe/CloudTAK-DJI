@@ -32,6 +32,25 @@ export const CloudTAKConfigLoginRes = Type.Object({
     signup: Type.Optional(Type.String())
 });
 
+/**
+ * DJI Pilot/RC Pro bridge bootstrap surfaced to the controller's web view.
+ * The controller calls `window.djiBridge.platformVerifyLicense(app_id, app_key,
+ * license)` and then `platformLoadComponent('thing', ...)` with the MQTT
+ * coordinates returned here. Returned only to authenticated callers.
+ */
+export const CloudTAKConfigDJIRes = Type.Object({
+    configured: Type.Boolean(),
+    app_id: Type.Optional(Type.Integer()),
+    app_key: Type.Optional(Type.String()),
+    license: Type.Optional(Type.String()),
+    workspace_id: Type.String(),
+    mqtt: Type.Object({
+        host: Type.String(),
+        username: Type.String(),
+        password: Type.String()
+    })
+});
+
 /* ---------------- DJI Cloud API canonical request/response shapes ---------------- */
 
 export const DJIIamLoginReq = Type.Object({
