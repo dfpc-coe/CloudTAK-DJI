@@ -49,6 +49,18 @@ export default async function router(schema: Schema, config: Config) {
                 throw new Err(401, null, 'Invalid credentials');
             }
 
+            if (upstream.status >= 400) {
+                const upstreamBody = await upstream.json().catch(() => null) as {
+                    message?: string;
+                } | null;
+
+                throw new Err(
+                    upstream.status,
+                    null,
+                    upstreamBody?.message || `CloudTAK login failed: ${upstream.status}`
+                );
+            }
+
             const upstreamBody = await upstream.typed(Type.Object({
                 token: Type.String(),
                 access: Type.Optional(Type.String()),
@@ -91,6 +103,18 @@ export default async function router(schema: Schema, config: Config) {
 
             if (upstream.status === 401) {
                 throw new Err(401, null, 'CloudTAK session expired');
+            }
+
+            if (upstream.status >= 400) {
+                const upstreamBody = await upstream.json().catch(() => null) as {
+                    message?: string;
+                } | null;
+
+                throw new Err(
+                    upstream.status,
+                    null,
+                    upstreamBody?.message || `CloudTAK session lookup failed: ${upstream.status}`
+                );
             }
 
             const user = await upstream.typed(CloudTAKLoginRes);
