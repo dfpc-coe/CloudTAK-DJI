@@ -19,6 +19,13 @@
             <div class='row align-items-center g-4'>
                 <div class='col-lg'>
                     <div class='container-tight'>
+                        <TablerInlineAlert
+                            v-if='!djiBridgeAvailable'
+                            class='mb-3'
+                            severity='warning'
+                            title='No DJI controller detected'
+                            description='This page is not running inside a DJI Pilot/RC Pro web view, so no DJI device can be bound to this session. Sign-in will still work for monitoring, but the controller-side Cloud Service handshake will be skipped.'
+                        />
                         <div class='card card-md'>
                             <div
                                 v-if='!brandStore || !brandStore.loaded'
@@ -137,6 +144,7 @@ import { std } from '../std.ts';
 import { bootstrapDJIBridge, isDJIBridgeAvailable } from '../dji-bridge.ts';
 import {
     TablerLoading,
+    TablerInlineAlert,
     TablerInput
 } from '@tak-ps/vue-tabler'
 
@@ -147,6 +155,7 @@ const router = useRouter();
 const brandStore = useBrandStore();
 
 const loading = ref(false);
+const djiBridgeAvailable = ref(isDJIBridgeAvailable());
 const body = ref<Login_Create>({
     username: '',
     password: ''
@@ -154,6 +163,11 @@ const body = ref<Login_Create>({
 
 onMounted(async () => {
     await brandStore.init();
+
+    // Some controllers inject `window.djiBridge` after the initial document
+    // load; re-check once the page has settled so the warning banner is
+    // accurate when running inside DJI Pilot/RC Pro.
+    djiBridgeAvailable.value = isDJIBridgeAvailable();
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -187,13 +201,17 @@ async function createLogin() {
         // When the page is hosted inside the DJI Pilot/RC Pro web view, hand
         // the controller its app license + MQTT coordinates so the in-app
         // "Cloud Service" tile flips to "Logged In" and devices begin to
-        // report into the fleet view. Failures here are surfaced but should
-        // not block the regular browser experience.
+        // report into the fleet view. Failures here are surfaced via the
+        // global TablerError modal and abort the sign-in so the operator
+        // can correct the controller-side problem before proceeding.
         if (isDJIBridgeAvailable()) {
             try {
                 await bootstrapDJIBridge();
             } catch (bridgeErr) {
                 console.error('DJI bridge bootstrap failed:', bridgeErr);
+                // Roll back the partial sign-in so the user can retry
+                // cleanly once the bridge issue is fixed.
+                delete localStorage.token;
                 throw bridgeErr;
             }
         }
