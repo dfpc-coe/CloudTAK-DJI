@@ -1,13 +1,47 @@
 #!/bin/sh
-
-set -x
+# Container entrypoint that runs Mosquitto and the CloudTAK-DJI API in
+# the same task. Mosquitto listens on TCP 1883 (DJI Pilot accepts plain
+# MQTT); the API connects to it over loopback. Both are children of a
+# small init shell — if either dies we exit non-zero so ECS reschedules
+# the task.
 set -eu
+
+: "${MQTT_USERNAME:?MQTT_USERNAME must be set}"
+: "${MQTT_PASSWORD:?MQTT_PASSWORD must be set}"
+: "${API_URL:?API_URL must be set}"
+
+mkdir -p /mosquitto/config /mosquitto/data /mosquitto/log
+
+# Materialise the password file from env (rewritten on each start so
+# rotated secrets take effect on next task launch).
+printf '%s:%s' "$MQTT_USERNAME" "$MQTT_PASSWORD" > /mosquitto/config/passwd
+mosquitto_passwd -U /mosquitto/config/passwd
 
 echo "API_URL: ${API_URL}"
 
-while :
-do
-    npm run prod
-    echo "FATAL ERROR: Code: $?"
-done
+mosquitto -c /mosquitto/config/mosquitto.conf &
+MOSQ_PID=$!
+echo "ok - mosquitto launched pid=${MOSQ_PID} on 1883"
+
+# The API auto-restarts on crash via this inner loop.
+(
+    while :
+    do
+        npm run prod || true
+        echo "FATAL ERROR: api exited — restarting in 1s"
+        sleep 1
+    done
+) &
+API_PID=$!
+
+# Forward signals to both children so ECS task stop is graceful.
+trap 'kill -TERM "$MOSQ_PID" "$API_PID" 2>/dev/null || true; wait' TERM INT
+
+# If either child exits, tear the container down so ECS reschedules.
+wait -n "$MOSQ_PID" "$API_PID"
+EXIT=$?
+echo "child exited with ${EXIT} — terminating remaining processes"
+kill -TERM "$MOSQ_PID" "$API_PID" 2>/dev/null || true
+wait
+exit "$EXIT"
 

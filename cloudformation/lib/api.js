@@ -3,10 +3,16 @@ import cf from '@openaddresses/cloudfriend';
 /**
  * CloudTAK-DJI API + Web UI service.
  *
- * Sits behind its own internet-facing NLB on TCP 443. The container reads
- * upstream CloudTAK and AWS IoT Core MQTT coordinates from environment
- * variables; the JWT signing secret and the IoT Core shared password are
- * injected from Secrets Manager.
+ * Sits behind its own internet-facing NLB. The single Fargate task runs
+ * both the API container and an in-task Mosquitto broker:
+ *   - NLB :443  → container :5004  (HTTPS API + web UI, TLS terminated at NLB)
+ *   - NLB :1883 → container :1883  (plain MQTT for DJI Pilot — the
+ *                                   controller bridge does not implement
+ *                                   ALPN so the AWS IoT Core endpoint is
+ *                                   not usable here)
+ *
+ * The JWT signing secret and the broker password are injected from
+ * Secrets Manager.
  */
 export default {
   Resources: {
@@ -65,6 +71,14 @@ export default {
                 IpProtocol: 'tcp',
                 FromPort: 443,
                 ToPort: 443
+            }, {
+                // DJI Pilot speaks plain MQTT directly to the broker
+                // co-located in the api task; the NLB forwards 1883
+                // straight through.
+                CidrIp: '0.0.0.0/0',
+                IpProtocol: 'tcp',
+                FromPort: 1883,
+                ToPort: 1883
             }],
             VpcId: cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-vpc']))
         }
@@ -86,6 +100,9 @@ export default {
                 PortMappings: [{
                     ContainerPort: 5004,
                     Protocol: 'tcp'
+                }, {
+                    ContainerPort: 1883,
+                    Protocol: 'tcp'
                 }],
                 Environment: [
                     { Name: 'StackName', Value: cf.stackName },
@@ -97,20 +114,19 @@ export default {
                     { Name: 'AWS_REGION', Value: cf.region },
                     { Name: 'WORKSPACE_ID', Value: cf.ref('WorkspaceId') },
                     {
+                        // The api process talks to the in-task broker
+                        // over loopback.
                         Name: 'MQTT_URL',
-                        Value: cf.join(['mqtts://', cf.getAtt('IotDataEndpoint', 'EndpointAddress'), ':443'])
+                        Value: 'mqtt://localhost:1883'
                     },
                     {
+                        // The URL handed to DJI Pilot. The NLB forwards
+                        // tcp/1883 straight through to the same task.
                         Name: 'MQTT_PUBLIC_URL',
-                        Value: cf.join(['mqtts://', cf.getAtt('IotDataEndpoint', 'EndpointAddress'), ':443'])
+                        Value: cf.join(['tcp://dji.', cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-hosted-zone-name'])), ':1883'])
                     },
-                    {
-                        Name: 'MQTT_USERNAME',
-                        Value: cf.join([
-                            'cloudtak-dji?x-amz-customauthorizer-name=',
-                            cf.join([cf.stackName, '-mqtt-auth'])
-                        ])
-                    },
+                    { Name: 'MQTT_USERNAME', Value: 'cloudtak-dji' },
+                    { Name: 'MEDIA_URL', Value: cf.ref('MediaURL') },
                     { Name: 'DJI_APP_ID', Value: cf.ref('DJIAppId') },
                     { Name: 'DJI_APP_KEY', Value: cf.ref('DJIAppKey') },
                     { Name: 'DJI_APP_LICENSE', Value: cf.ref('DJIAppLicense') }
@@ -218,7 +234,7 @@ export default {
     },
     Service: {
         Type: 'AWS::ECS::Service',
-        DependsOn: ['ListenerApi'],
+        DependsOn: ['ListenerApi', 'ListenerMqtt'],
         Properties: {
             ServiceName: cf.join('-', [cf.stackName, 'Service']),
             Cluster: cf.join(['tak-vpc-', cf.ref('Environment')]),
@@ -240,6 +256,10 @@ export default {
                 ContainerName: 'api',
                 ContainerPort: 5004,
                 TargetGroupArn: cf.ref('TargetGroupApi')
+            }, {
+                ContainerName: 'api',
+                ContainerPort: 1883,
+                TargetGroupArn: cf.ref('TargetGroupMqtt')
             }]
         }
     },
@@ -255,6 +275,12 @@ export default {
                 IpProtocol: 'tcp',
                 FromPort: 5004,
                 ToPort: 5004
+            }, {
+                Description: 'MQTT NLB Traffic (DJI Pilot)',
+                CidrIp: '0.0.0.0/0',
+                IpProtocol: 'tcp',
+                FromPort: 1883,
+                ToPort: 1883
             }]
         }
     },
@@ -287,6 +313,36 @@ export default {
             HealthCheckPath: '/api',
             HealthCheckTimeoutSeconds: 10,
             HealthyThresholdCount: 5
+        }
+    },
+    ListenerMqtt: {
+        Type: 'AWS::ElasticLoadBalancingV2::Listener',
+        Properties: {
+            DefaultActions: [{
+                Type: 'forward',
+                TargetGroupArn: cf.ref('TargetGroupMqtt')
+            }],
+            LoadBalancerArn: cf.ref('ELB'),
+            // Plain MQTT — DJI Pilot's `thing` component does not
+            // implement TLS/ALPN. Authentication is enforced by the
+            // Mosquitto password file inside the task.
+            Port: 1883,
+            Protocol: 'TCP'
+        }
+    },
+    TargetGroupMqtt: {
+        Type: 'AWS::ElasticLoadBalancingV2::TargetGroup',
+        Properties: {
+            Port: 1883,
+            Protocol: 'TCP',
+            TargetType: 'ip',
+            VpcId: cf.importValue(cf.join(['tak-vpc-', cf.ref('Environment'), '-vpc'])),
+            HealthCheckEnabled: true,
+            HealthCheckIntervalSeconds: 30,
+            HealthCheckPort: '1883',
+            HealthCheckProtocol: 'TCP',
+            HealthCheckTimeoutSeconds: 10,
+            HealthyThresholdCount: 3
         }
     }
   }

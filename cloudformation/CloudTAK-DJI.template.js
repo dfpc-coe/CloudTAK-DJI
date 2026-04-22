@@ -1,11 +1,9 @@
 import cf from '@openaddresses/cloudfriend';
 import API from './lib/api.js';
-import MQTT from './lib/mqtt.js';
 import Secrets from './lib/secrets.js';
 
 export default cf.merge(
     Secrets,
-    MQTT,
     API,
     {
         Description: 'Template for CloudTAK-DJI',
@@ -24,6 +22,11 @@ export default cf.merge(
                 Type: 'String',
                 Default: 'default-workspace'
             },
+            MediaURL: {
+                Description: 'Base RTMP URL of the operator-supplied media server (e.g. rtmp://media.example.com:1935/live). Required for DJI Pilot livestream pushes; leave empty to require an explicit `url` per livestream API call.',
+                Type: 'String',
+                Default: ''
+            },
             DJIAppId: {
                 Description: 'DJI Pilot Cloud API app_id (integer issued by DJI). Required for the controller web-view to verify its license and bring the Cloud Service online.',
                 Type: 'Number',
@@ -33,13 +36,11 @@ export default cf.merge(
                 Description: 'DJI Pilot Cloud API app_key issued alongside the app_id.',
                 Type: 'String',
                 Default: '',
-                NoEcho: true
             },
             DJIAppLicense: {
                 Description: 'DJI Pilot Cloud API license string issued by DJI for this app_id/app_key pair.',
                 Type: 'String',
                 Default: '',
-                NoEcho: true
             },
             EnableExecute: {
                 Description: 'Allow SSH into docker container - should only be enabled for limited debugging',

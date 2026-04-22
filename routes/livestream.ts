@@ -59,8 +59,15 @@ export default async function router(schema: Schema, config: Config) {
             if (!dev.online) throw new Err(409, null, 'Device offline');
 
             const url_type = req.body.url_type ?? 'rtmp';
-            const url = req.body.url
-                ?? `rtmp://${process.env.RTMP_HOST ?? 'media-infra'}:1935/live/${req.params.sn}`;
+            let url = req.body.url;
+            if (!url) {
+                if (!config.MEDIA_URL) {
+                    throw new Err(412, null,
+                        'No livestream destination configured. Set MEDIA_URL on the server '
+                        + '(e.g. rtmp://media.example.com:1935/live) or pass `url` in the request body.');
+                }
+                url = `${config.MEDIA_URL}/${req.params.sn}`;
+            }
 
             const reply = await getBroker().invokeService<{ data?: { result?: number } }>(
                 req.params.sn,

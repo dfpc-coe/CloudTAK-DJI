@@ -3,7 +3,7 @@ import Err from '@openaddresses/batch-error';
 import { fetch } from 'undici';
 import crypto from 'node:crypto';
 import type Config from './config.js';
-import { sign } from './auth.js';
+import { sign, verify } from './auth.js';
 import { devices } from './devices.js';
 
 /**
@@ -21,6 +21,26 @@ import { devices } from './devices.js';
 export default function djiCloudRouter(config: Config): Router {
     const router = express.Router();
     router.use(express.json({ limit: '5mb' }));
+
+    /**
+     * DJI Pilot sends `x-auth-token: <access_token>` (the JWT we minted
+     * during /iam/login) on every subsequent call. Validate it on all
+     * non-login routes so a leaked workspace_id cannot be used to enumerate
+     * the device fleet or trigger binds.
+     */
+    function requirePilot(req: express.Request, _res: express.Response, next: express.NextFunction): void {
+        const tok = req.headers['x-auth-token'];
+        const value = Array.isArray(tok) ? tok[0] : tok;
+        if (typeof value !== 'string' || !value) {
+            return next(new Err(401, null, 'Missing x-auth-token'));
+        }
+        try {
+            verify(config, value);
+            return next();
+        } catch (err) {
+            return next(err);
+        }
+    }
 
     /**
      * POST /manage/api/v1/iam/login
@@ -78,7 +98,7 @@ export default function djiCloudRouter(config: Config): Router {
     });
 
     /** GET /manage/api/v1/workspaces/:workspace_id/devices */
-    router.get('/workspaces/:workspace_id/devices', (req, res) => {
+    router.get('/workspaces/:workspace_id/devices', requirePilot, (req, res) => {
         const data = devices.list().map(d => ({
             device_sn: d.sn,
             device_name: d.callsign ?? d.model,
@@ -88,21 +108,22 @@ export default function djiCloudRouter(config: Config): Router {
     });
 
     /** POST /manage/api/v1/devices/:device_sn/binding */
-    router.post('/devices/:device_sn/binding', (req, res) => {
+    router.post('/devices/:device_sn/binding', requirePilot, (req, res) => {
         const body = (req.body ?? {}) as { device_callsign?: string };
-        devices.upsert(req.params.device_sn, {
+        const sn = String(req.params.device_sn);
+        devices.upsert(sn, {
             callsign: body.device_callsign,
             type: 'aircraft',
             domain: '0'
         });
         // Emits a `bound` SSE event so the web UI shows the UAS
         // immediately, even before the first OSD frame arrives.
-        devices.markBound(req.params.device_sn, body.device_callsign);
+        devices.markBound(sn, body.device_callsign);
         res.json({ code: 0, message: 'success' });
     });
 
     /** GET /manage/api/v1/livestream/capacity */
-    router.get('/livestream/capacity', (_req, res) => {
+    router.get('/livestream/capacity', requirePilot, (_req, res) => {
         const list = devices.list().filter(d => d.type === 'aircraft' || d.type === 'gateway');
         res.json({
             code: 0,

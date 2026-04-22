@@ -25,6 +25,15 @@ export default class Config {
     WORKSPACE_ID: string;
 
     /**
+     * Base RTMP URL of the operator-supplied media server (e.g.
+     * `rtmp://media.example.com:1935/live`). When set, livestream
+     * starts will publish to `${MEDIA_URL}/{sn}`. When unset, the
+     * `/api/device/:sn/livestream` route requires an explicit `url`
+     * in the request body and otherwise rejects with 412.
+     */
+    MEDIA_URL?: string;
+
+    /**
      * DJI Pilot/RC Pro Cloud-API license. These are issued by DJI to the
      * deploying organisation per app and must be passed into the
      * `window.djiBridge.platformVerifyLicense(appId, appKey, license)` call
@@ -45,6 +54,7 @@ export default class Config {
         MQTT_PASSWORD?: string;
         MQTT_PUBLIC_URL: string;
         WORKSPACE_ID: string;
+        MEDIA_URL?: string;
         DJI_APP_ID?: number;
         DJI_APP_KEY?: string;
         DJI_APP_LICENSE?: string;
@@ -58,6 +68,7 @@ export default class Config {
         this.MQTT_PASSWORD = init.MQTT_PASSWORD;
         this.MQTT_PUBLIC_URL = init.MQTT_PUBLIC_URL;
         this.WORKSPACE_ID = init.WORKSPACE_ID;
+        this.MEDIA_URL = init.MEDIA_URL;
         this.DJI_APP_ID = init.DJI_APP_ID;
         this.DJI_APP_KEY = init.DJI_APP_KEY;
         this.DJI_APP_LICENSE = init.DJI_APP_LICENSE;
@@ -85,6 +96,9 @@ export default class Config {
         const MQTT_URL = process.env.MQTT_URL || 'mqtt://localhost:1883';
         const MQTT_PUBLIC_URL = process.env.MQTT_PUBLIC_URL || MQTT_URL;
         const WORKSPACE_ID = process.env.WORKSPACE_ID || 'default-workspace';
+        const MEDIA_URL = process.env.MEDIA_URL
+            ? process.env.MEDIA_URL.replace(/\/+$/, '')
+            : undefined;
 
         let DJI_APP_ID: number | undefined;
         if (process.env.DJI_APP_ID) {
@@ -105,6 +119,7 @@ export default class Config {
             MQTT_PASSWORD: process.env.MQTT_PASSWORD,
             MQTT_PUBLIC_URL,
             WORKSPACE_ID,
+            MEDIA_URL,
             DJI_APP_ID,
             DJI_APP_KEY: process.env.DJI_APP_KEY || undefined,
             DJI_APP_LICENSE: process.env.DJI_APP_LICENSE || undefined
@@ -115,6 +130,7 @@ export default class Config {
             console.error(`ok - StackName: ${config.StackName}`);
             console.error(`ok - API_URL: ${config.API_URL}`);
             console.error(`ok - MQTT_URL: ${config.MQTT_URL}`);
+            console.error(`ok - MEDIA_URL: ${config.MEDIA_URL ?? '(unset)'}`);
             console.error(`ok - DJI_APP_ID: ${config.DJI_APP_ID ?? '(unset)'}`);
             console.error(`ok - DJI_APP_KEY: ${config.DJI_APP_KEY ? '(set)' : '(unset)'}`);
             console.error(`ok - DJI_APP_LICENSE: ${config.DJI_APP_LICENSE ? '(set)' : '(unset)'}`);

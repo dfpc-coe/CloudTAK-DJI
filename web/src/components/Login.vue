@@ -128,6 +128,63 @@
                                 :href='brandStore.login.signup'
                             >Sign Up</a>
                         </div>
+
+                        <div class='mt-3'>
+                            <a
+                                href='#'
+                                class='text-muted small cursor-pointer'
+                                @click.prevent='advancedOpen = !advancedOpen'
+                            >
+                                {{ advancedOpen ? '▾' : '▸' }} Advanced — DJI bridge diagnostics
+                            </a>
+                            <div
+                                v-if='advancedOpen'
+                                class='card card-sm mt-2 bg-dark text-light'
+                            >
+                                <div class='card-body p-2'>
+                                    <div class='d-flex align-items-center mb-2'>
+                                        <small>
+                                            window.djiBridge:
+                                            <strong :class='djiBridgeAvailable ? "text-success" : "text-warning"'>
+                                                {{ djiBridgeAvailable ? 'detected' : 'not present' }}
+                                            </strong>
+                                        </small>
+                                        <div class='ms-auto btn-list'>
+                                            <button
+                                                type='button'
+                                                class='btn btn-sm btn-outline-light'
+                                                @click='snapshotBridge'
+                                            >
+                                                Snapshot state
+                                            </button>
+                                            <button
+                                                type='button'
+                                                class='btn btn-sm btn-outline-light'
+                                                @click='clearLogs'
+                                            >
+                                                Clear
+                                            </button>
+                                            <button
+                                                type='button'
+                                                class='btn btn-sm btn-outline-light'
+                                                @click='copyLogs'
+                                            >
+                                                Copy
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <pre
+                                        ref='logBox'
+                                        class='mb-0 small'
+                                        style='max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-all;'
+                                    ><template v-if='!bridgeLogs.length'>No bridge activity yet. Sign in or press "Snapshot state".</template><template
+                                        v-for='(entry, idx) in bridgeLogs'
+                                        :key='idx'
+                                    >{{ entry.ts }} [{{ entry.level }}] {{ entry.message }}
+</template></pre>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -137,11 +194,18 @@
 
 <script setup lang='ts'>
 import type { Login_Create, Login_CreateRes } from '../types.ts'
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { useBrandStore } from '../stores/brand.ts';
 import { useRouter, useRoute } from 'vue-router'
 import { std } from '../std.ts';
-import { bootstrapDJIBridge, isDJIBridgeAvailable } from '../dji-bridge.ts';
+import {
+    bootstrapDJIBridge,
+    isDJIBridgeAvailable,
+    subscribeDJIBridgeLogs,
+    clearDJIBridgeLogs,
+    captureDJIBridgeSnapshot,
+    type DJIBridgeLogEntry
+} from '../dji-bridge.ts';
 import {
     TablerLoading,
     TablerInlineAlert,
@@ -156,6 +220,10 @@ const brandStore = useBrandStore();
 
 const loading = ref(false);
 const djiBridgeAvailable = ref(isDJIBridgeAvailable());
+const advancedOpen = ref(false);
+const bridgeLogs = ref<readonly DJIBridgeLogEntry[]>([]);
+const logBox = ref<HTMLElement | null>(null);
+let unsubscribeLogs: (() => void) | undefined;
 const body = ref<Login_Create>({
     username: '',
     password: ''
@@ -168,6 +236,15 @@ onMounted(async () => {
     // load; re-check once the page has settled so the warning banner is
     // accurate when running inside DJI Pilot/RC Pro.
     djiBridgeAvailable.value = isDJIBridgeAvailable();
+
+    unsubscribeLogs = subscribeDJIBridgeLogs((entries) => {
+        bridgeLogs.value = entries;
+        if (advancedOpen.value) {
+            void nextTick(() => {
+                if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight;
+            });
+        }
+    });
 
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.getRegistrations().then((registrations) => {
@@ -226,6 +303,37 @@ async function createLogin() {
     } catch (err) {
         loading.value = false;
         throw err;
+    }
+}
+
+onBeforeUnmount(() => {
+    if (unsubscribeLogs) unsubscribeLogs();
+});
+
+watch(advancedOpen, (open) => {
+    if (open) {
+        void nextTick(() => {
+            if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight;
+        });
+    }
+});
+
+function snapshotBridge() {
+    captureDJIBridgeSnapshot();
+}
+
+function clearLogs() {
+    clearDJIBridgeLogs();
+}
+
+async function copyLogs() {
+    const text = bridgeLogs.value
+        .map((e) => `${e.ts} [${e.level}] ${e.message}`)
+        .join('\n');
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (err) {
+        console.error('Failed to copy logs:', err);
     }
 }
 </script>

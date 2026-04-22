@@ -5,16 +5,9 @@ services:
           dockerfile: Dockerfile
         restart: 'always'
         ports:
-            - "5003:5003"
-        environment:
-            - API_URL=${API_URL}
-    mqtt:
-        build:
-          context: .
-          dockerfile: Dockerfile.mqtt
-        restart: 'always'
-        ports:
+            - "5004:5004"
             - "1883:1883"
         environment:
+            - API_URL=${API_URL}
             - MQTT_USERNAME=${MQTT_USERNAME:-cloudtak-dji}
             - MQTT_PASSWORD=${MQTT_PASSWORD:-changeme}
