@@ -46,12 +46,15 @@ export async function std(
 
     const res = await fetch(url, opts as RequestInit);
 
-    let bdy = {};
+    let bdy: unknown;
     if ((res.status < 200 || res.status >= 400) && ![401].includes(res.status)) {
         try {
             bdy = await res.json();
         } catch (err) {
-            throw new Error(`Status Code: ${res.status}: ${err instanceof Error ? err.message : String(err)}`);
+            throw new Error(
+                `Status Code: ${res.status}: ${err instanceof Error ? err.message : String(err)}`,
+                { cause: err }
+            );
         }
 
         const errbody = bdy as { message: string };

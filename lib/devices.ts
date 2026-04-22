@@ -1,6 +1,22 @@
 import { EventEmitter } from 'node:events';
 
-export type DeviceType = 'aircraft' | 'gateway' | 'dock';
+export type DeviceType = 'aircraft' | 'gateway' | 'dock' | 'payload';
+
+/**
+ * DJI Cloud API "domain" enum (gateway-device topology).
+ *  '0' = aircraft, '1' = payload, '2' = remote controller, '3' = dock.
+ */
+export type DeviceDomain = '0' | '1' | '2' | '3';
+
+export function domainToType(domain: DeviceDomain | string): DeviceType {
+    switch (String(domain)) {
+        case '0': return 'aircraft';
+        case '1': return 'payload';
+        case '2': return 'gateway';
+        case '3': return 'dock';
+        default: return 'aircraft';
+    }
+}
 
 export interface DJIOsd {
     longitude?: number;
@@ -23,10 +39,22 @@ export interface DJIDevice {
     sn: string;
     callsign?: string;
     type: DeviceType;
+    /** DJI domain code (`0`=aircraft, `2`=RC, `3`=dock, ...). */
+    domain?: DeviceDomain;
+    /** Cached DJI product enum, e.g. `0-77-0` for Mavic 3E. */
+    model_key?: string;
+    /** Parent gateway SN for sub-devices (aircraft -> RC/dock). */
+    parent_sn?: string;
+    /** Slot index reported by gateway (e.g. "A"). */
+    index?: string;
     model?: string;
     online: boolean;
+    /** True once the device has been bound to an organization. */
+    bound?: boolean;
     last_seen?: string;
     osd?: DJIOsd;
+    /** Last raw `state` payload (live_capacity, is_cloud_control_auth, ...). */
+    state?: Record<string, unknown>;
     livestream?: {
         url?: string;
         kind?: 'rtmp' | 'rtsp' | 'hls' | 'webrtc' | 'gb28181';
@@ -35,10 +63,11 @@ export interface DJIDevice {
 }
 
 export interface DeviceEvent {
-    type: 'snapshot' | 'osd' | 'state' | 'online' | 'offline' | 'livestream';
+    type: 'snapshot' | 'osd' | 'state' | 'online' | 'offline' | 'livestream' | 'bound';
     sn: string;
     device?: DJIDevice;
     osd?: DJIOsd;
+    state?: Record<string, unknown>;
 }
 
 /**
@@ -91,6 +120,23 @@ export class DeviceRegistry extends EventEmitter {
             online: true
         });
         this.emit('event', { type: 'osd', sn, device: dev, osd: stamped } as DeviceEvent);
+        return dev;
+    }
+
+    applyState(sn: string, state: Record<string, unknown>): DJIDevice {
+        const merged = { ...(this.devices.get(sn)?.state ?? {}), ...state };
+        const dev = this.upsert(sn, {
+            state: merged,
+            last_seen: new Date().toISOString(),
+            online: true
+        });
+        this.emit('event', { type: 'state', sn, device: dev, state: merged } as DeviceEvent);
+        return dev;
+    }
+
+    markBound(sn: string, callsign?: string): DJIDevice {
+        const dev = this.upsert(sn, { bound: true, callsign });
+        this.emit('event', { type: 'bound', sn, device: dev } as DeviceEvent);
         return dev;
     }
 

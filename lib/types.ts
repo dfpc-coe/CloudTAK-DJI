@@ -61,12 +61,19 @@ export const DJIDevice = Type.Object({
     type: Type.Union([
         Type.Literal('aircraft'),
         Type.Literal('gateway'),
-        Type.Literal('dock')
+        Type.Literal('dock'),
+        Type.Literal('payload')
     ]),
+    domain: Type.Optional(Type.String()),
+    model_key: Type.Optional(Type.String()),
+    parent_sn: Type.Optional(Type.String()),
+    index: Type.Optional(Type.String()),
     model: Type.Optional(Type.String()),
     online: Type.Boolean(),
+    bound: Type.Optional(Type.Boolean()),
     last_seen: Type.Optional(Type.String()),
     osd: Type.Optional(Type.Any()),
+    state: Type.Optional(Type.Any()),
     livestream: Type.Optional(Type.Object({
         url: Type.Optional(Type.String()),
         kind: Type.Optional(Type.String()),

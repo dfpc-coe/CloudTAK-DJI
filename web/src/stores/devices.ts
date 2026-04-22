@@ -61,7 +61,7 @@ export const useDevicesStore = defineStore('devices', {
                 if (evt.device) this.items[evt.sn] = evt.device;
             };
 
-            for (const t of ['osd', 'state', 'online', 'offline', 'livestream']) {
+            for (const t of ['osd', 'state', 'online', 'offline', 'livestream', 'bound']) {
                 es.addEventListener(t, apply as EventListener);
             }
 

@@ -92,8 +92,12 @@ export default function djiCloudRouter(config: Config): Router {
         const body = (req.body ?? {}) as { device_callsign?: string };
         devices.upsert(req.params.device_sn, {
             callsign: body.device_callsign,
-            type: 'aircraft'
+            type: 'aircraft',
+            domain: '0'
         });
+        // Emits a `bound` SSE event so the web UI shows the UAS
+        // immediately, even before the first OSD frame arrives.
+        devices.markBound(req.params.device_sn, body.device_callsign);
         res.json({ code: 0, message: 'success' });
     });
 
