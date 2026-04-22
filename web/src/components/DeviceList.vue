@@ -8,12 +8,14 @@
                 />
                 <span class='mx-2'>UAS Fleet</span>
             </h3>
-            <span
-                class='ms-auto badge'
-                :class='devicesStore.connected ? "bg-success" : "bg-warning"'
+            <TablerBadge
+                class='ms-auto'
+                :background-color='devicesStore.connected ? "rgba(47, 179, 68, 0.2)" : "rgba(245, 159, 0, 0.2)"'
+                :border-color='devicesStore.connected ? "rgba(47, 179, 68, 0.5)" : "rgba(245, 159, 0, 0.5)"'
+                :text-color='devicesStore.connected ? "#2fb344" : "#f59f00"'
             >
                 {{ devicesStore.connected ? 'live' : 'offline' }}
-            </span>
+            </TablerBadge>
         </div>
         <div
             class='list-group list-group-flush'
@@ -69,6 +71,7 @@
 <script setup lang='ts'>
 import { useDevicesStore } from '../stores/devices.ts';
 import { IconDrone, IconBattery } from '@tabler/icons-vue';
+import { TablerBadge } from '@tak-ps/vue-tabler';
 
 defineProps<{ selected?: string }>();
 defineEmits<{ (e: 'select', sn: string): void }>();

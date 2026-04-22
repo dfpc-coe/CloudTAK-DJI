@@ -6,12 +6,14 @@
         <div class='card-body py-2'>
             <div class='d-flex align-items-center'>
                 <div>
-                    <span
-                        class='badge me-2'
-                        :class='device.online ? "bg-green text-white" : "bg-secondary text-white"'
+                    <TablerBadge
+                        class='me-2'
+                        :background-color='device.online ? "rgba(47, 179, 68, 0.2)" : "rgba(130, 130, 130, 0.15)"'
+                        :border-color='device.online ? "rgba(47, 179, 68, 0.5)" : "rgba(130, 130, 130, 0.4)"'
+                        :text-color='device.online ? "#2fb344" : "#888"'
                     >
                         {{ device.online ? 'ONLINE' : 'OFFLINE' }}
-                    </span>
+                    </TablerBadge>
                     <strong>{{ device.callsign || device.sn }}</strong>
                     <span class='text-muted ms-2'>{{ device.type }}</span>
                 </div>
@@ -19,7 +21,13 @@
                     v-if='device.livestream && device.livestream.active'
                     class='ms-auto'
                 >
-                    <span class='badge bg-red text-white'>LIVE</span>
+                    <TablerBadge
+                        background-color='rgba(214, 57, 57, 0.2)'
+                        border-color='rgba(214, 57, 57, 0.5)'
+                        text-color='#d63939'
+                    >
+                        LIVE
+                    </TablerBadge>
                 </div>
             </div>
 
@@ -50,6 +58,7 @@
 
 <script setup lang='ts'>
 import { computed } from 'vue';
+import { TablerBadge } from '@tak-ps/vue-tabler';
 import type { DJIDevice } from '../types.ts';
 
 const props = defineProps<{ device: DJIDevice }>();

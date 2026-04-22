@@ -79,7 +79,14 @@
                                         stroke='1'
                                     />
                                     <span class='mx-2'>Server</span>
-                                    <span class='ms-auto badge border border-red bg-red text-white'>Admin</span>
+                                    <TablerBadge
+                                        class='ms-auto'
+                                        background-color='rgba(214, 57, 57, 0.2)'
+                                        border-color='rgba(214, 57, 57, 0.6)'
+                                        text-color='#d63939'
+                                    >
+                                        Admin
+                                    </TablerBadge>
                                 </div>
                                 <div
                                     class='d-flex dropdown-item cursor-pointer hover'
@@ -131,6 +138,7 @@ import {
 } from '@tabler/icons-vue';
 import Loading from './components/Loading.vue';
 import {
+    TablerBadge,
     TablerError
 } from '@tak-ps/vue-tabler';
 import { std } from './std.ts';
