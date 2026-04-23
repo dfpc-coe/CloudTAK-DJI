@@ -48,8 +48,12 @@
             />
             <div class='modal-header'>
                 <div>
-                    <h3 class='modal-title mb-0'>DJI Bridge Diagnostics</h3>
-                    <div class='text-muted small'>Bridge bootstrap, callbacks, and live controller logs.</div>
+                    <h3 class='modal-title mb-0'>
+                        DJI Bridge Diagnostics
+                    </h3>
+                    <div class='text-muted small'>
+                        Bridge bootstrap, callbacks, and live controller logs.
+                    </div>
                 </div>
             </div>
             <div class='modal-body debug-modal-body'>
