@@ -18,7 +18,7 @@
             </TablerBadge>
             <TablerIconButton
                 class='ms-2'
-                :title='debug ? "Hide DJI bridge diagnostics" : "Show DJI bridge diagnostics"'
+                :title='debug ? "Close DJI bridge diagnostics" : "Open DJI bridge diagnostics"'
                 @click='$emit("toggle-debug")'
             >
                 <IconCode

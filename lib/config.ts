@@ -26,6 +26,9 @@ export default class Config {
 
     /** Default workspace handed back to Pilot in IAM responses. */
     WORKSPACE_ID: string;
+    PLATFORM_NAME: string;
+    WORKSPACE_NAME: string;
+    WORKSPACE_DESC: string;
 
     /**
      * Base RTMP URL of the operator-supplied media server (e.g.
@@ -57,6 +60,9 @@ export default class Config {
         MQTT_PASSWORD?: string;
         MQTT_PUBLIC_URL: string;
         WORKSPACE_ID: string;
+        PLATFORM_NAME: string;
+        WORKSPACE_NAME: string;
+        WORKSPACE_DESC: string;
         MEDIA_URL?: string;
         DJI_APP_ID?: number;
         DJI_APP_KEY?: string;
@@ -71,6 +77,9 @@ export default class Config {
         this.MQTT_PASSWORD = init.MQTT_PASSWORD;
         this.MQTT_PUBLIC_URL = init.MQTT_PUBLIC_URL;
         this.WORKSPACE_ID = init.WORKSPACE_ID;
+        this.PLATFORM_NAME = init.PLATFORM_NAME;
+        this.WORKSPACE_NAME = init.WORKSPACE_NAME;
+        this.WORKSPACE_DESC = init.WORKSPACE_DESC;
         this.MEDIA_URL = init.MEDIA_URL;
         this.DJI_APP_ID = init.DJI_APP_ID;
         this.DJI_APP_KEY = init.DJI_APP_KEY;
@@ -102,6 +111,9 @@ export default class Config {
         if (!UUID_PATTERN.test(WORKSPACE_ID)) {
             throw new Error(`WORKSPACE_ID must be a UUID (per DJI Cloud API platformSetWorkspaceId); got "${WORKSPACE_ID}"`);
         }
+        const PLATFORM_NAME = process.env.PLATFORM_NAME || 'CloudTAK';
+        const WORKSPACE_NAME = process.env.WORKSPACE_NAME || 'CloudTAK';
+        const WORKSPACE_DESC = process.env.WORKSPACE_DESC || '';
         const MEDIA_URL = process.env.MEDIA_URL
             ? process.env.MEDIA_URL.replace(/\/+$/, '')
             : undefined;
@@ -125,6 +137,9 @@ export default class Config {
             MQTT_PASSWORD: process.env.MQTT_PASSWORD,
             MQTT_PUBLIC_URL,
             WORKSPACE_ID,
+            PLATFORM_NAME,
+            WORKSPACE_NAME,
+            WORKSPACE_DESC,
             MEDIA_URL,
             DJI_APP_ID,
             DJI_APP_KEY: process.env.DJI_APP_KEY || undefined,
@@ -136,6 +151,10 @@ export default class Config {
             console.error(`ok - StackName: ${config.StackName}`);
             console.error(`ok - API_URL: ${config.API_URL}`);
             console.error(`ok - MQTT_URL: ${config.MQTT_URL}`);
+            console.error(`ok - WORKSPACE_ID: ${config.WORKSPACE_ID}`);
+            console.error(`ok - PLATFORM_NAME: ${config.PLATFORM_NAME}`);
+            console.error(`ok - WORKSPACE_NAME: ${config.WORKSPACE_NAME}`);
+            console.error(`ok - WORKSPACE_DESC: ${config.WORKSPACE_DESC || '(unset)'}`);
             console.error(`ok - MEDIA_URL: ${config.MEDIA_URL ?? '(unset)'}`);
             console.error(`ok - DJI_APP_ID: ${config.DJI_APP_ID ?? '(unset)'}`);
             console.error(`ok - DJI_APP_KEY: ${config.DJI_APP_KEY ? '(set)' : '(unset)'}`);

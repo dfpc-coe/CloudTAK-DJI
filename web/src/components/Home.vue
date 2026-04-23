@@ -10,13 +10,8 @@
                 />
             </div>
             <div class='col-md-8'>
-                <DJIBridgeAdvanced
-                    v-if='debugOpen'
-                    embedded
-                    :allow-rebootstrap='true'
-                />
                 <div
-                    v-else-if='!selected'
+                    v-if='!selected'
                     class='card bg-accent text-white'
                 >
                     <div class='card-body p-5 text-center'>
@@ -40,6 +35,40 @@
                 </template>
             </div>
         </div>
+
+        <TablerModal
+            v-if='debugOpen'
+            size='lg'
+        >
+            <button
+                type='button'
+                class='btn-close'
+                aria-label='Close'
+                @click='debugOpen = false'
+            />
+            <div class='modal-header'>
+                <div>
+                    <h3 class='modal-title mb-0'>DJI Bridge Diagnostics</h3>
+                    <div class='text-muted small'>Bridge bootstrap, callbacks, and live controller logs.</div>
+                </div>
+            </div>
+            <div class='modal-body debug-modal-body'>
+                <DJIBridgeAdvanced
+                    embedded
+                    modal
+                    :allow-rebootstrap='true'
+                />
+            </div>
+            <div class='modal-footer'>
+                <button
+                    type='button'
+                    class='btn btn-primary ms-auto'
+                    @click='debugOpen = false'
+                >
+                    Close
+                </button>
+            </div>
+        </TablerModal>
     </div>
 </template>
 
@@ -52,6 +81,7 @@ import DeviceCard from './DeviceCard.vue';
 import DevicePlayer from './DevicePlayer.vue';
 import DJIBridgeAdvanced from './DJIBridgeAdvanced.vue';
 import { IconDrone } from '@tabler/icons-vue';
+import { TablerModal } from '@tak-ps/vue-tabler';
 
 defineProps<{
     user: { email: string; access?: string };
@@ -75,3 +105,11 @@ onMounted(async () => {
 
 onBeforeUnmount(() => devicesStore.disconnect());
 </script>
+
+<style scoped>
+.debug-modal-body {
+    max-height: calc(100vh - 12rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+}
+</style>

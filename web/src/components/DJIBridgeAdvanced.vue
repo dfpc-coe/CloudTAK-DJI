@@ -10,10 +10,16 @@
         </a>
         <div
             v-if='embedded || advancedOpen'
-            class='card card-sm bg-dark text-light'
-            :class='embedded ? "" : "mt-2"'
+            class='bg-dark text-light'
+            :class='[
+                modal ? "rounded-3" : "card card-sm",
+                embedded || modal ? "" : "mt-2"
+            ]'
         >
-            <div class='card-body p-2'>
+            <div
+                class='d-flex flex-column gap-2 bridge-panel-body'
+                :class='modal ? "p-3" : "card-body p-2"'
+            >
                 <div class='d-flex align-items-center mb-2 flex-wrap gap-2'>
                     <small>
                         window.djiBridge:
@@ -57,8 +63,8 @@
                 </div>
                 <pre
                     ref='logBox'
-                    class='mb-0 small'
-                    style='max-height: 240px; overflow: auto; white-space: pre-wrap; word-break: break-all;'
+                    class='mb-0 small bridge-log'
+                    :class='{ "bridge-log-modal": modal }'
                 ><template v-if='!bridgeLogs.length'>No bridge activity yet. Press "Snapshot state" to inspect the controller, or "Re-run bootstrap" to retry the Cloud Service handshake.</template><template
                     v-for='(entry, idx) in bridgeLogs'
                     :key='idx'
@@ -95,9 +101,11 @@ const props = withDefaults(defineProps<{
      * where visibility is controlled by an external toggle button.
      */
     embedded?: boolean;
+    modal?: boolean;
 }>(), {
     allowRebootstrap: false,
-    embedded: false
+    embedded: false,
+    modal: false
 });
 
 const advancedOpen = ref(false);
@@ -169,3 +177,21 @@ async function rebootstrap() {
     }
 }
 </script>
+
+<style scoped>
+.bridge-panel-body {
+    min-height: 0;
+}
+
+.bridge-log {
+    max-height: 240px;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overscroll-behavior: contain;
+}
+
+.bridge-log-modal {
+    max-height: min(52vh, 480px);
+}
+</style>
