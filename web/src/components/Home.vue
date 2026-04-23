@@ -33,6 +33,7 @@
                 </template>
             </div>
         </div>
+        <DJIBridgeAdvanced :allow-rebootstrap='true' />
     </div>
 </template>
 
@@ -43,6 +44,7 @@ import { useDevicesStore } from '../stores/devices.ts';
 import DeviceList from './DeviceList.vue';
 import DeviceCard from './DeviceCard.vue';
 import DevicePlayer from './DevicePlayer.vue';
+import DJIBridgeAdvanced from './DJIBridgeAdvanced.vue';
 import { IconDrone } from '@tabler/icons-vue';
 
 defineProps<{
