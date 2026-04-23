@@ -1,6 +1,7 @@
 <template>
-    <div class='mt-3'>
+    <div :class='embedded ? "" : "mt-3"'>
         <a
+            v-if='!embedded'
             href='#'
             class='text-muted small cursor-pointer'
             @click.prevent='advancedOpen = !advancedOpen'
@@ -8,8 +9,9 @@
             {{ advancedOpen ? '▾' : '▸' }} Advanced — DJI bridge diagnostics
         </a>
         <div
-            v-if='advancedOpen'
-            class='card card-sm mt-2 bg-dark text-light'
+            v-if='embedded || advancedOpen'
+            class='card card-sm bg-dark text-light'
+            :class='embedded ? "" : "mt-2"'
         >
             <div class='card-body p-2'>
                 <div class='d-flex align-items-center mb-2 flex-wrap gap-2'>
@@ -78,7 +80,7 @@ import {
     type DJIBridgeLogEntry
 } from '../dji-bridge.ts';
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
     /**
      * Show the "Re-run bootstrap" button. Useful on the post-login
      * Home view where the operator notices the Pilot Cloud tile is
@@ -87,8 +89,15 @@ withDefaults(defineProps<{
      * already invokes the bootstrap.
      */
     allowRebootstrap?: boolean;
+    /**
+     * When true, render the diagnostics panel directly without the
+     * "Advanced" disclosure link or top margin. Used by the Home view
+     * where visibility is controlled by an external toggle button.
+     */
+    embedded?: boolean;
 }>(), {
-    allowRebootstrap: false
+    allowRebootstrap: false,
+    embedded: false
 });
 
 const advancedOpen = ref(false);
@@ -103,7 +112,7 @@ onMounted(() => {
     djiBridgeAvailable.value = isDJIBridgeAvailable();
     unsubscribeLogs = subscribeDJIBridgeLogs((entries) => {
         bridgeLogs.value = entries;
-        if (advancedOpen.value) {
+        if (props.embedded || advancedOpen.value) {
             void nextTick(() => {
                 if (logBox.value) logBox.value.scrollTop = logBox.value.scrollHeight;
             });

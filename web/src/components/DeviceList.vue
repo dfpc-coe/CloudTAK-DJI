@@ -16,6 +16,17 @@
             >
                 {{ devicesStore.connected ? 'live' : 'offline' }}
             </TablerBadge>
+            <TablerIconButton
+                class='ms-2'
+                :title='debug ? "Hide DJI bridge diagnostics" : "Show DJI bridge diagnostics"'
+                @click='$emit("toggle-debug")'
+            >
+                <IconCode
+                    :size='20'
+                    :stroke='1.5'
+                    :class='debug ? "text-warning" : ""'
+                />
+            </TablerIconButton>
         </div>
         <div
             class='list-group list-group-flush'
@@ -70,11 +81,14 @@
 
 <script setup lang='ts'>
 import { useDevicesStore } from '../stores/devices.ts';
-import { IconDrone, IconBattery } from '@tabler/icons-vue';
-import { TablerBadge } from '@tak-ps/vue-tabler';
+import { IconDrone, IconBattery, IconCode } from '@tabler/icons-vue';
+import { TablerBadge, TablerIconButton } from '@tak-ps/vue-tabler';
 
-defineProps<{ selected?: string }>();
-defineEmits<{ (e: 'select', sn: string): void }>();
+defineProps<{ selected?: string; debug?: boolean }>();
+defineEmits<{
+    (e: 'select', sn: string): void;
+    (e: 'toggle-debug'): void;
+}>();
 
 const devicesStore = useDevicesStore();
 </script>

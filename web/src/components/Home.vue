@@ -4,12 +4,19 @@
             <div class='col-md-4'>
                 <DeviceList
                     :selected='selectedSn'
+                    :debug='debugOpen'
                     @select='selectedSn = $event'
+                    @toggle-debug='debugOpen = !debugOpen'
                 />
             </div>
             <div class='col-md-8'>
+                <DJIBridgeAdvanced
+                    v-if='debugOpen'
+                    embedded
+                    :allow-rebootstrap='true'
+                />
                 <div
-                    v-if='!selected'
+                    v-else-if='!selected'
                     class='card bg-accent text-white'
                 >
                     <div class='card-body p-5 text-center'>
@@ -33,7 +40,6 @@
                 </template>
             </div>
         </div>
-        <DJIBridgeAdvanced :allow-rebootstrap='true' />
     </div>
 </template>
 
@@ -55,6 +61,7 @@ const devicesStore = useDevicesStore();
 const { items } = storeToRefs(devicesStore);
 
 const selectedSn = ref<string | undefined>();
+const debugOpen = ref(false);
 const selected = computed(() => selectedSn.value ? items.value[selectedSn.value] : undefined);
 
 onMounted(async () => {
