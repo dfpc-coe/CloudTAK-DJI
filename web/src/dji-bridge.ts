@@ -307,11 +307,15 @@ export async function bootstrapDJIBridge(): Promise<void> {
 function setPilotPlatformInfo(bridge: NonNullable<Window['djiBridge']>, cfg: DJIBridgeConfig): void {
     if (typeof bridge.platformSetWorkspaceId === 'function') {
         try {
+            if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cfg.workspace_id)) {
+                pushLog('error', 'WORKSPACE_ID is not a UUID — Pilot rejects platformSetWorkspaceId with code 615000');
+            } else {
             const raw = bridge.platformSetWorkspaceId(cfg.workspace_id);
             pushLog('info', `platformSetWorkspaceId("${cfg.workspace_id}") → ${raw}`);
             const parsed = parseBridgeResult('platformSetWorkspaceId', raw);
             if (parsed.data === false) {
                 pushLog('warn', 'platformSetWorkspaceId returned data:false — Pilot may show "Not Logged In"');
+            }
             }
         } catch (err) {
             pushLog('error', `platformSetWorkspaceId threw: ${(err as Error).message}`);

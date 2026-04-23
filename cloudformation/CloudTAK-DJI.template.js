@@ -20,7 +20,9 @@ export default cf.merge(
             WorkspaceId: {
                 Description: 'DJI Cloud API workspace_id handed back to DJI Pilot',
                 Type: 'String',
-                Default: 'default-workspace'
+                Default: '00000000-0000-0000-0000-000000000000',
+                AllowedPattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+                ConstraintDescription: 'Must be a UUID, e.g. 00000000-0000-0000-0000-000000000000'
             },
             PlatformName: {
                 Description: 'Display name for the Pilot "Cloud Service" tile (platformSetInformation). Without this, the tile stays "Not Logged In" even when MQTT is connected.',

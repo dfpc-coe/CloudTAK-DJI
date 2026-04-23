@@ -46,7 +46,7 @@ DJI Pilot 2 ──► /manage/api/v1/iam/login ──► federates to CloudTAK l
 | `MQTT_PUBLIC_URL` | URL handed back to DJI Pilot (often the same as `MQTT_URL`)   | `MQTT_URL`                 |
 | `MQTT_USERNAME`   | Optional broker creds                                         | —                          |
 | `MQTT_PASSWORD`   | Optional broker creds                                         | —                          |
-| `WORKSPACE_ID`    | Workspace handed back in IAM responses                        | `default-workspace`        |
+| `WORKSPACE_ID`    | Workspace UUID handed back in IAM responses                   | `00000000-0000-0000-0000-000000000000` |
 | `DJI_APP_ID`      | DJI Pilot Cloud-API `app_id` (integer issued by DJI)          | —                          |
 | `DJI_APP_KEY`     | DJI Pilot Cloud-API `app_key`                                 | —                          |
 | `DJI_APP_LICENSE` | DJI Pilot Cloud-API license string                            | —                          |
