@@ -28,6 +28,8 @@ export interface DJIBridgeLogEntry {
 const logs: DJIBridgeLogEntry[] = [];
 const subscribers = new Set<(entries: readonly DJIBridgeLogEntry[]) => void>();
 const MAX_LOG_ENTRIES = 200;
+const COMPONENT_LOAD_TIMEOUT_MS = 3000;
+const COMPONENT_LOAD_POLL_MS = 100;
 
 function pushLog(level: DJIBridgeLogEntry['level'], message: string): void {
     const entry: DJIBridgeLogEntry = {
@@ -62,6 +64,10 @@ export function clearDJIBridgeLogs(): void {
     logs.length = 0;
     const snapshot = Object.freeze(logs.slice());
     for (const fn of subscribers) fn(snapshot);
+}
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
 let installedCallback = false;
@@ -216,18 +222,45 @@ export async function bootstrapDJIBridge(): Promise<void> {
     pushLog('info', `platformLoadComponent(thing) → ${loadRaw}`);
     parseBridgeResult('platformLoadComponent(thing)', loadRaw);
 
+    pushLog('info', 'waiting for thing component to finish loading');
+    const loaded = await waitForComponentLoaded(bridge, 'thing');
+    pushLog('info', `platformIsComponentLoaded("thing") → ${loaded}`);
+    if (!loaded) {
+        throw new Error('DJI bridge accepted platformLoadComponent(thing) but the thing module never reported loaded');
+    }
+
     // Step 4: explicitly establish the MQTT connection. Some controller
     // firmwares auto-connect on `platformLoadComponent`, others require
     // the explicit `thingConnect` call shown in the DJI MVP.
     if (typeof bridge.thingConnect === 'function') {
         pushLog('info', `thingConnect("${cfg.mqtt.username}", <password>, "cloudtakDjiBridgeCallback")`);
-        const connectRaw = bridge.thingConnect(
+        let connectRaw = bridge.thingConnect(
             cfg.mqtt.username,
             cfg.mqtt.password,
             'cloudtakDjiBridgeCallback'
         );
         pushLog('info', `thingConnect → ${connectRaw}`);
-        parseBridgeResult('thingConnect', connectRaw);
+
+        try {
+            parseBridgeResult('thingConnect', connectRaw);
+        } catch (err) {
+            if ((err as Error).message.includes('code 615011')) {
+                pushLog('warn', 'thingConnect raced the controller component loader; waiting once and retrying');
+                const retriedLoaded = await waitForComponentLoaded(bridge, 'thing');
+                pushLog('info', `platformIsComponentLoaded("thing") after retry wait → ${retriedLoaded}`);
+                if (!retriedLoaded) throw err;
+
+                connectRaw = bridge.thingConnect(
+                    cfg.mqtt.username,
+                    cfg.mqtt.password,
+                    'cloudtakDjiBridgeCallback'
+                );
+                pushLog('info', `thingConnect retry → ${connectRaw}`);
+                parseBridgeResult('thingConnect retry', connectRaw);
+            } else {
+                throw err;
+            }
+        }
     } else {
         pushLog('warn', 'thingConnect is not exposed on this firmware; relying on auto-connect');
     }
@@ -235,12 +268,6 @@ export async function bootstrapDJIBridge(): Promise<void> {
     // Step 5: confirm the component is loaded and the MQTT connection is
     // live. `thingGetConnectState` returns a JSON string per DJI docs;
     // older firmwares omit it entirely so guard the call.
-    const loaded = bridge.platformIsComponentLoaded('thing');
-    pushLog('info', `platformIsComponentLoaded("thing") → ${loaded}`);
-    if (!loaded) {
-        throw new Error('DJI bridge loaded the `thing` component but platformIsComponentLoaded(thing)=false');
-    }
-
     if (typeof bridge.thingGetConnectState === 'function') {
         const stateRaw = bridge.thingGetConnectState();
         pushLog('info', `thingGetConnectState() → ${stateRaw}`);
@@ -295,6 +322,25 @@ export async function bootstrapDJIBridge(): Promise<void> {
     setPilotPlatformInfo(bridge, cfg);
 
     pushLog('info', 'bootstrap complete');
+}
+
+async function waitForComponentLoaded(
+    bridge: NonNullable<Window['djiBridge']>,
+    name: string,
+    timeoutMs = COMPONENT_LOAD_TIMEOUT_MS,
+    intervalMs = COMPONENT_LOAD_POLL_MS
+): Promise<boolean> {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+        if (bridge.platformIsComponentLoaded(name)) {
+            return true;
+        }
+
+        await sleep(intervalMs);
+    }
+
+    return bridge.platformIsComponentLoaded(name);
 }
 
 /**

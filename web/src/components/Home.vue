@@ -40,12 +40,6 @@
             v-if='debugOpen'
             size='lg'
         >
-            <button
-                type='button'
-                class='btn-close'
-                aria-label='Close'
-                @click='debugOpen = false'
-            />
             <div class='modal-header'>
                 <div>
                     <h3 class='modal-title mb-0'>
@@ -55,6 +49,12 @@
                         Bridge bootstrap, callbacks, and live controller logs.
                     </div>
                 </div>
+                <button
+                    type='button'
+                    class='btn-close'
+                    aria-label='Close'
+                    @click='debugOpen = false'
+                />
             </div>
             <div class='modal-body debug-modal-body'>
                 <DJIBridgeAdvanced
@@ -62,15 +62,6 @@
                     modal
                     :allow-rebootstrap='true'
                 />
-            </div>
-            <div class='modal-footer'>
-                <button
-                    type='button'
-                    class='btn btn-primary ms-auto'
-                    @click='debugOpen = false'
-                >
-                    Close
-                </button>
             </div>
         </TablerModal>
     </div>
