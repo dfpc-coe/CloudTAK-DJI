@@ -23,7 +23,7 @@
             >
                 <IconCode
                     :size='20'
-                    :stroke='1.5'
+                    stroke='1.5'
                     :class='debug ? "text-warning" : ""'
                 />
             </TablerIconButton>
