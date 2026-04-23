@@ -62,8 +62,14 @@ export default async function router(schema: Schema, config: Config) {
                 ?? req.headers['host']
                 ?? 'localhost';
             const proto = (Array.isArray(xfProto) ? xfProto[0] : xfProto) ?? 'https';
-            const apiHost = `${proto}://${host}`;
-            const wsHost = `${proto === 'https' ? 'wss' : 'ws'}://${host}`;
+            // The DJI reference impl (dji-sdk/Cloud-API-Demo-Web
+            // src/api/http/config.ts) uses a `baseURL` ending in `/`
+            // for `api.host`, and a complete websocket URL including
+            // path (`ws://…/api/v1/ws`) for `ws.host`. Mirror that
+            // exactly — Pilot's native HTTP/WS clients are picky about
+            // both.
+            const apiHost = `${proto}://${host}/`;
+            const wsHost = `${proto === 'https' ? 'wss' : 'ws'}://${host}/api/v1/ws`;
 
             res.json({
                 configured,

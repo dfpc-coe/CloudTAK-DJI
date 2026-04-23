@@ -102,6 +102,12 @@ export function isDJIBridgeAvailable(): boolean {
  * as a JSON string. A non-zero `code` indicates failure; we throw a
  * descriptive Error so the Login view can surface it via its existing
  * error pipeline (TablerError modal).
+ *
+ * Some bridge methods (`platformVerifyLicense`, `platformSetInformation`)
+ * additionally encode success in `data`: a `{code:0, data:false}` envelope
+ * means "the call was accepted but the underlying operation failed" —
+ * which is exactly what happens when `appId` is supplied as a JSON Number
+ * instead of a String. Use `requireDataTrue` for those.
  */
 function parseBridgeResult(step: string, raw: string): { code: number; message: string; data?: unknown } {
     let parsed: { code?: number; message?: string; data?: unknown };
@@ -160,20 +166,45 @@ export async function bootstrapDJIBridge(): Promise<void> {
     const bridge = window.djiBridge!;
     installCallback();
 
-    // Step 1: verify the platform license. Both the parsed result code
-    // AND the synchronous `platformIsVerified()` getter must agree.
-    pushLog('info', `platformVerifyLicense(${cfg.app_id}, "${cfg.app_key}", <license:${cfg.license.length}b>)`);
-    const verifyRaw = bridge.platformVerifyLicense(cfg.app_id, cfg.app_key, cfg.license);
+    // Step 1: verify the platform license.
+    //
+    // CRITICAL: appId MUST be passed as a string. The native side
+    // checks the type strictly; passing a JS Number causes the call to
+    // return `{code:0, data:false}` ("envelope OK, license rejected")
+    // and `platformIsVerified()` will then return false, leaving the
+    // Pilot Cloud Service tile stuck on "Not Logged In" even though
+    // every subsequent component "loads" successfully.
+    // Source: dji-sdk/Cloud-API-Demo-Web src/api/pilot-bridge.ts.
+    const appIdStr = String(cfg.app_id);
+    pushLog('info', `platformVerifyLicense("${appIdStr}", "${cfg.app_key}", <license:${cfg.license.length}b>)`);
+    const verifyRaw = bridge.platformVerifyLicense(appIdStr as unknown as number, cfg.app_key, cfg.license);
     pushLog('info', `platformVerifyLicense → ${verifyRaw}`);
-    parseBridgeResult('platformVerifyLicense', verifyRaw);
+    const verifyParsed = parseBridgeResult('platformVerifyLicense', verifyRaw);
+    if (verifyParsed.data === false) {
+        throw new Error(
+            'platformVerifyLicense returned code:0 data:false. '
+            + 'The most common cause is appId being passed as a number instead of a string, '
+            + 'or the appId/appKey/license triple not matching the package signature DJI issued the license for.'
+        );
+    }
 
     const verified = bridge.platformIsVerified();
     pushLog('info', `platformIsVerified() → ${verified}`);
     if (!verified) {
-        throw new Error('DJI controller rejected the supplied app license (platformIsVerified=false)');
+        throw new Error('DJI controller rejected the supplied app license (platformIsVerified=false). Double-check appId/appKey/license and that the WebView origin matches the package the license was issued for.');
     }
 
-    // Step 2: register the `thing` component with MQTT broker coords.
+    // Step 2: tell Pilot who we are RIGHT NOW. The Cloud Service tile
+    // on Pilot's main page is driven by these two calls — they are
+    // independent of MQTT/api/ws status. Calling them up front means
+    // the tile flips as soon as the license is accepted; it will not
+    // wait for the broker handshake and won't be reverted if a later
+    // optional component fails to load. We re-issue them at the end of
+    // bootstrap too, in case the user lands on Pilot home before the
+    // bootstrap completes.
+    setPilotPlatformInfo(bridge, cfg);
+
+    // Step 3: register the `thing` component with MQTT broker coords.
     const registerParams = JSON.stringify({
         host: cfg.mqtt.host,
         connectCallback: 'cloudtakDjiBridgeCallback',
@@ -185,7 +216,7 @@ export async function bootstrapDJIBridge(): Promise<void> {
     pushLog('info', `platformLoadComponent(thing) → ${loadRaw}`);
     parseBridgeResult('platformLoadComponent(thing)', loadRaw);
 
-    // Step 3: explicitly establish the MQTT connection. Some controller
+    // Step 4: explicitly establish the MQTT connection. Some controller
     // firmwares auto-connect on `platformLoadComponent`, others require
     // the explicit `thingConnect` call shown in the DJI MVP.
     if (typeof bridge.thingConnect === 'function') {
@@ -201,7 +232,7 @@ export async function bootstrapDJIBridge(): Promise<void> {
         pushLog('warn', 'thingConnect is not exposed on this firmware; relying on auto-connect');
     }
 
-    // Step 4: confirm the component is loaded and the MQTT connection is
+    // Step 5: confirm the component is loaded and the MQTT connection is
     // live. `thingGetConnectState` returns a JSON string per DJI docs;
     // older firmwares omit it entirely so guard the call.
     const loaded = bridge.platformIsComponentLoaded('thing');
@@ -228,57 +259,85 @@ export async function bootstrapDJIBridge(): Promise<void> {
         pushLog('warn', 'thingGetConnectState is not exposed on this firmware');
     }
 
-    // Step 5: load the `api` component so Pilot can call our REST API.
+    // Step 6: load the `api` component so Pilot can call our REST API.
     // Failure here is non-fatal (older firmwares lack /manage/api/v1
     // dependencies), but most of the Cloud Service tile depends on it.
+    // Per DJI's reference impl `host` MUST end with `/`.
     loadOptionalComponent(bridge, 'api', JSON.stringify({
-        host: cfg.api.host,
+        host: cfg.api.host.endsWith('/') ? cfg.api.host : cfg.api.host + '/',
         token: cfg.api.token
     }));
 
-    // Step 6: load the `ws` component for realtime updates Pilot pushes
+    // Step 7: load the `ws` component for realtime updates Pilot pushes
     // into the platform (binding completion, mission progress, etc.).
+    // Per DJI's reference impl `host` is a complete websocket URL
+    // including path (e.g. wss://host/api/v1/ws), not just an origin.
     loadOptionalComponent(bridge, 'ws', JSON.stringify({
         host: cfg.ws.host,
         token: cfg.ws.token,
         connectCallback: 'cloudtakDjiBridgeCallback'
     }));
 
-    // Step 7: load `liveshare` so the Cloud-issued `live_start_push`
-    // service can actually deliver video. `videoPublishType` controls
-    // whether Pilot waits for the user to approve each push:
-    //   0 = manual share button on Pilot (used by the Live page)
-    //   1 = automatic on demand (recommended for headless cloud control)
-    //   2 = mixed (manual + on-demand)
+    // Step 8: load `liveshare` so the Cloud-issued `live_start_push`
+    // service can actually deliver video. `videoPublishType` strings
+    // (per DJI docs):
+    //   video-on-demand           — server-issued via thing model
+    //   video-by-manual           — operator presses Live in Pilot
+    //   video-demand-aux-manual   — both
     loadOptionalComponent(bridge, 'liveshare', JSON.stringify({
         videoPublishType: 'video-on-demand'
     }));
 
-    // Step 8: tell Pilot which workspace and platform we are. This is
-    // what flips the Pilot main-page Cloud Service tile from
-    // "Not Logged In" to the configured platform name. Without these
-    // calls the tile stays unset even when MQTT is fully online.
+    // Step 9: re-issue platform info now that everything is loaded.
+    // Some Pilot firmwares only refresh the tile after a component
+    // load event; calling here ensures the tile reflects the live
+    // session immediately after every bootstrap.
+    setPilotPlatformInfo(bridge, cfg);
+
+    pushLog('info', 'bootstrap complete');
+}
+
+/**
+ * Apply `platformSetWorkspaceId` and `platformSetInformation`. These two
+ * calls are what the Pilot main page reads when rendering the Cloud
+ * Service tile. They are deliberately decoupled from component loading
+ * so a transient MQTT/api/ws failure can't leave the user staring at
+ * "Not Logged In" while every other indicator says we're connected.
+ */
+function setPilotPlatformInfo(bridge: NonNullable<Window['djiBridge']>, cfg: DJIBridgeConfig): void {
     if (typeof bridge.platformSetWorkspaceId === 'function') {
-        const wsRaw = bridge.platformSetWorkspaceId(cfg.workspace_id);
-        pushLog('info', `platformSetWorkspaceId("${cfg.workspace_id}") → ${wsRaw}`);
-        parseBridgeResult('platformSetWorkspaceId', wsRaw);
+        try {
+            const raw = bridge.platformSetWorkspaceId(cfg.workspace_id);
+            pushLog('info', `platformSetWorkspaceId("${cfg.workspace_id}") → ${raw}`);
+            const parsed = parseBridgeResult('platformSetWorkspaceId', raw);
+            if (parsed.data === false) {
+                pushLog('warn', 'platformSetWorkspaceId returned data:false — Pilot may show "Not Logged In"');
+            }
+        } catch (err) {
+            pushLog('error', `platformSetWorkspaceId threw: ${(err as Error).message}`);
+        }
     } else {
         pushLog('warn', 'platformSetWorkspaceId not exposed — Pilot tile may stay "Not Logged In"');
     }
 
     if (typeof bridge.platformSetInformation === 'function') {
-        const infoRaw = bridge.platformSetInformation(
-            cfg.platform_name,
-            cfg.workspace_name,
-            cfg.workspace_desc
-        );
-        pushLog('info', `platformSetInformation("${cfg.platform_name}", "${cfg.workspace_name}", "${cfg.workspace_desc}") → ${infoRaw}`);
-        parseBridgeResult('platformSetInformation', infoRaw);
+        try {
+            const raw = bridge.platformSetInformation(
+                cfg.platform_name,
+                cfg.workspace_name,
+                cfg.workspace_desc
+            );
+            pushLog('info', `platformSetInformation("${cfg.platform_name}", "${cfg.workspace_name}", "${cfg.workspace_desc}") → ${raw}`);
+            const parsed = parseBridgeResult('platformSetInformation', raw);
+            if (parsed.data === false) {
+                pushLog('warn', 'platformSetInformation returned data:false — Pilot may show "Not Logged In"');
+            }
+        } catch (err) {
+            pushLog('error', `platformSetInformation threw: ${(err as Error).message}`);
+        }
     } else {
         pushLog('warn', 'platformSetInformation not exposed — Pilot tile may stay "Not Logged In"');
     }
-
-    pushLog('info', 'bootstrap complete');
 }
 
 /**
