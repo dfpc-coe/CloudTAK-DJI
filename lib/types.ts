@@ -101,6 +101,7 @@ export const DJIDevice = Type.Object({
     model: Type.Optional(Type.String()),
     online: Type.Boolean(),
     bound: Type.Optional(Type.Boolean()),
+    owner: Type.Optional(Type.String()),
     last_seen: Type.Optional(Type.String()),
     osd: Type.Optional(Type.Any()),
     state: Type.Optional(Type.Any()),

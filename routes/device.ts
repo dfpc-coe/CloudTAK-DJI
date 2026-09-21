@@ -4,6 +4,7 @@ import Schema from '@openaddresses/batch-schema';
 import Config from '../lib/config.js';
 import { verify } from '../lib/auth.js';
 import { devices, type DeviceEvent } from '../lib/devices.js';
+import { getForwarder } from '../lib/forwarder.js';
 import { DJIDevice } from '../lib/types.js';
 
 function bearer(req: { headers: Record<string, unknown> }): string | undefined {
@@ -51,6 +52,27 @@ export default async function router(schema: Schema, config: Config) {
             const dev = devices.get(req.params.sn);
             if (!dev) throw new Err(404, null, 'Device not found');
             res.json(dev);
+        } catch (err) {
+            Err.respond(err as Error, res);
+        }
+    });
+
+    await schema.post('/device/:sn/claim', {
+        name: 'Claim Device',
+        group: 'Device',
+        description: 'Forward the positions of an aircraft, or of all aircraft behind a gateway, to CloudTAK as the calling user',
+        params: Type.Object({ sn: Type.String() }),
+        body: Type.Object({
+            type: Type.Optional(Type.Union([Type.Literal('aircraft'), Type.Literal('gateway')]))
+        }),
+        res: DJIDevice
+    }, async (req, res) => {
+        try {
+            const tok = bearer(req);
+            if (!tok) throw new Err(401, null, 'Authentication Required');
+            const session = verify(config, tok);
+
+            res.json(getForwarder().claim(req.params.sn, session, req.body.type));
         } catch (err) {
             Err.respond(err as Error, res);
         }

@@ -3,8 +3,9 @@ import Err from '@openaddresses/batch-error';
 import { fetch } from 'undici';
 import crypto from 'node:crypto';
 import type Config from './config.js';
-import { sign, verify } from './auth.js';
+import { sign, verify, type SessionPayload } from './auth.js';
 import { devices } from './devices.js';
+import { getForwarder } from './forwarder.js';
 
 /**
  * DJI Cloud API endpoints consumed by DJI Pilot 2 / RC Plus directly.
@@ -304,6 +305,7 @@ export default function djiCloudRouter(config: Config): Router {
         // Emits a `bound` SSE event so the web UI shows the UAS
         // immediately, even before the first OSD frame arrives.
         devices.markBound(sn, body.device_callsign);
+        getForwarder().claim(sn, (req as express.Request & { djiSession: SessionPayload }).djiSession);
         res.json({ code: 0, message: 'success' });
     });
 

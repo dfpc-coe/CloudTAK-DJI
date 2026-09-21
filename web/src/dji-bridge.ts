@@ -321,7 +321,39 @@ export async function bootstrapDJIBridge(): Promise<void> {
     // session immediately after every bootstrap.
     setPilotPlatformInfo(bridge, cfg);
 
+    // Step 10: claim this controller (and its aircraft, if already
+    // linked) so the server forwards the UAS position to CloudTAK as
+    // the logged-in operator.
+    await claimDevices(bridge);
+
     pushLog('info', 'bootstrap complete');
+}
+
+async function claimDevices(bridge: NonNullable<Window['djiBridge']>): Promise<void> {
+    const claims: Array<{ type: 'gateway' | 'aircraft'; fn?: () => string }> = [
+        { type: 'gateway', fn: bridge.platformGetRemoteControllerSN?.bind(bridge) },
+        { type: 'aircraft', fn: bridge.platformGetAircraftSN?.bind(bridge) }
+    ];
+
+    for (const claim of claims) {
+        if (!claim.fn) {
+            pushLog('warn', `${claim.type} serial number is not exposed on this firmware - its position will not be forwarded to CloudTAK until bound`);
+            continue;
+        }
+
+        try {
+            const sn = parseBridgeResult(`${claim.type} SN`, claim.fn()).data;
+            if (typeof sn !== 'string' || !sn) continue;
+
+            await std(`/api/device/${encodeURIComponent(sn)}/claim`, {
+                method: 'POST',
+                body: { type: claim.type }
+            });
+            pushLog('info', `claimed ${claim.type} ${sn} for CloudTAK position forwarding`);
+        } catch (err) {
+            pushLog('warn', `failed to claim ${claim.type}: ${(err as Error).message}`);
+        }
+    }
 }
 
 async function waitForComponentLoaded(

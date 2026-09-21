@@ -12,6 +12,7 @@ import Config from './lib/config.js';
 import process from 'node:process';
 import { DJIBroker, setBroker } from './lib/mqtt.js';
 import djiCloudRouter from './lib/dji-cloud.js';
+import { CloudTAKForwarder, setForwarder } from './lib/forwarder.js';
 
 const { values: args } = parseArgs({
     args: process.argv.slice(2),
@@ -180,7 +181,11 @@ export default async function server(config: Config): Promise<ServerManager> {
                 console.error('mqtt initial connect failed (will retry):', err);
             });
 
-            const sm = new ServerManager(srv, config, broker);
+            const forwarder = new CloudTAKForwarder(config);
+            setForwarder(forwarder);
+            forwarder.start();
+
+            const sm = new ServerManager(srv, config, broker, forwarder);
 
             return resolve(sm);
         });

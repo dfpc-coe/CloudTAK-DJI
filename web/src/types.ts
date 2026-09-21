@@ -93,6 +93,10 @@ export interface DJIBridge {
     platformGetWorkspaceId?(): string;
     /** Returns the platform/workspace info currently set, JSON-encoded. */
     platformGetInformation?(): string;
+    /** Serial number of the remote controller hosting the web view, JSON-encoded. */
+    platformGetRemoteControllerSN?(): string;
+    /** Serial number of the aircraft linked to the controller (empty until linked), JSON-encoded. */
+    platformGetAircraftSN?(): string;
     thingGetConnectState?(): string;
     thingConnect?(username: string, password: string, callback: string): string;
 }
@@ -119,6 +123,7 @@ export interface DJIDevice {
     model?: string;
     online: boolean;
     bound?: boolean;
+    owner?: string;
     last_seen?: string;         // ISO timestamp
     osd?: DJIOsd;
     state?: Record<string, unknown>;
@@ -147,7 +152,7 @@ export interface DJIOsd {
 }
 
 export interface DeviceEvent {
-    type: 'snapshot' | 'osd' | 'state' | 'online' | 'offline' | 'livestream' | 'bound';
+    type: 'snapshot' | 'osd' | 'state' | 'online' | 'offline' | 'livestream' | 'bound' | 'claimed';
     sn: string;
     device?: DJIDevice;
     osd?: DJIOsd;

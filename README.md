@@ -18,17 +18,27 @@ DJI Pilot 2 ──► /manage/api/v1/iam/login ──► federates to CloudTAK l
        ▼
    CloudTAK-DJI server  ──► /api/sse/device  ──►  Web UI (live OSD + HLS video)
        │
+       ├─► PUT /api/profile/feature?archive=false&submit=true  ──►  CloudTAK / TAK Server (UAS CoT)
+       │
        └─► live_start_push / live_stop_push  ──►  media-infra (RTMP → HLS)
 ```
 
 * `lib/mqtt.ts` subscribes to `sys/product/+/status`, `thing/product/+/osd`,
   `thing/product/+/state`, `thing/product/+/services_reply`,
   `thing/product/+/events` and feeds an in-memory `DeviceRegistry`.
-* `routes/device.ts` exposes `GET /api/device`, `GET /api/device/:sn`, and
-  `GET /api/sse/device` (Server-Sent Events) for the web UI.
+* `routes/device.ts` exposes `GET /api/device`, `GET /api/device/:sn`,
+  `POST /api/device/:sn/claim`, and `GET /api/sse/device` (Server-Sent Events) for the web UI.
 * `routes/livestream.ts` exposes `POST/DELETE /api/device/:sn/livestream`,
   which invokes the DJI `live_start_push` / `live_stop_push` Thing-Model
   services over MQTT.
+* `lib/forwarder.ts` streams each aircraft's OSD position (throttled to 1 Hz)
+  into CloudTAK as an `a-f-A-M-H-Q` CoT with UID `DJI-{sn}`, submitted as the
+  operator that claimed the aircraft or its controller. The web UI claims the
+  controller automatically after login inside DJI Pilot
+  (`POST /api/device/:sn/claim`); binding an aircraft from Pilot also claims
+  it. Claims are in-memory, so operators must log in again after a restart.
+  Requires a CloudTAK version with `archive`/`submit` support on
+  `PUT /api/profile/feature`.
 * `lib/dji-cloud.ts` exposes the DJI Pilot-facing `/manage/api/v1/*` surface:
   `iam/login`, `workspaces/:id/devices`, `devices/:sn/binding`,
   `livestream/capacity`.

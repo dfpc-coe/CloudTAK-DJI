@@ -51,6 +51,8 @@ export interface DJIDevice {
     online: boolean;
     /** True once the device has been bound to an organization. */
     bound?: boolean;
+    /** CloudTAK user whose session claimed the device - positions are forwarded as this user. */
+    owner?: string;
     last_seen?: string;
     osd?: DJIOsd;
     /** Last raw `state` payload (live_capacity, is_cloud_control_auth, ...). */
@@ -63,7 +65,7 @@ export interface DJIDevice {
 }
 
 export interface DeviceEvent {
-    type: 'snapshot' | 'osd' | 'state' | 'online' | 'offline' | 'livestream' | 'bound';
+    type: 'snapshot' | 'osd' | 'state' | 'online' | 'offline' | 'livestream' | 'bound' | 'claimed';
     sn: string;
     device?: DJIDevice;
     osd?: DJIOsd;
@@ -137,6 +139,12 @@ export class DeviceRegistry extends EventEmitter {
     markBound(sn: string, callsign?: string): DJIDevice {
         const dev = this.upsert(sn, { bound: true, callsign });
         this.emit('event', { type: 'bound', sn, device: dev } as DeviceEvent);
+        return dev;
+    }
+
+    claim(sn: string, owner: string, type?: DeviceType): DJIDevice {
+        const dev = this.upsert(sn, this.devices.has(sn) ? { owner } : { owner, type });
+        this.emit('event', { type: 'claimed', sn, device: dev } as DeviceEvent);
         return dev;
     }
 
